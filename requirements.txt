@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+psycopg2-binary
+pydantic-settings
+paho-mqtt
+asyncpg
+redis
+pydantic[email]
+passlib[bcrypt]
+pyjwt
+python-multipart

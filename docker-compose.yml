@@ -1,0 +1,39 @@
+services:
+  # --- PostgreSQL Database ---
+  db:
+    image: postgres:15-alpine
+    container_name: smart_home_db
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db_init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+
+  # --- Redis Cache ---
+  redis:
+    image: redis:7-alpine
+    container_name: smart_home_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # --- FastAPI ---
+  api:
+    build: .
+    container_name: smart_home_api
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:
