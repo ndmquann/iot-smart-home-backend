@@ -149,6 +149,8 @@ CREATE TABLE config (
     PRIMARY KEY (admin_id, setting_id, log_id)
 );
 
+CREATE INDEX idx_logs_home_id ON logs(home_id);
+
 -- ==============================================================================
 -- TEST DATA
 -- ==============================================================================
