@@ -132,7 +132,7 @@ CREATE TABLE interact (
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     device_id INTEGER REFERENCES devices(id) ON DELETE CASCADE,
     log_id INTEGER REFERENCES logs(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, devices_id, log_id)
+    PRIMARY KEY (user_id, device_id, log_id)
 );
 
 CREATE TABLE contain (
