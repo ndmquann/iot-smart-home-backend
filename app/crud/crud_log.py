@@ -4,18 +4,23 @@ from app.schemas.log import LogBase
 # ==========================================
 # 1. INTERACT (User -> Device -> Log)
 # ==========================================
-async def log_user_action(conn: asyncpg.Connection, user_id: int, device_id: int, description: str) -> dict:
+async def log_user_action(
+        conn: asyncpg.Connection, 
+        user_id: int, 
+        device_id: int, 
+        home_id: str,
+        description: str) -> dict:
     """
     logs when a user interacts with a controller
     """
     async with conn.transaction():
         # 1. create log
         query_log = """
-            INSERT INTO logs (type, description)
-            VALUES ('user action', $1)
+            INSERT INTO logs (type, description, home_id)
+            VALUES ('user action', $1, $2)
             RETURNING id, type, description, timestamp;
         """
-        new_log = await conn.fetchrow(query_log, description)
+        new_log = await conn.fetchrow(query_log, description, home_id)
 
         # 2. create mapping
         query_interact = """
@@ -32,18 +37,23 @@ async def log_user_action(conn: asyncpg.Connection, user_id: int, device_id: int
 # ==========================================
 # 2. CONFIG (Admin -> Setting -> Log)
 # ==========================================
-async def log_admin_action(conn: asyncpg.Connection, admin_id: int, setting_id: int, description: str) -> dict:
+async def log_admin_action(
+        conn: asyncpg.Connection, 
+        admin_id: int, 
+        setting_id: int, 
+        home_id: str, 
+        description: str) -> dict:
     """
     logs when an admin configures a setting (schedule or threshold only)
     """
     async with conn.transaction():
         # 1. create log
         query_log = """
-            INSERT INTO logs (type, description)
-            VALUES ('admin action', $1)
+            INSERT INTO logs (type, description, home_id)
+            VALUES ('admin action', $1, $2)
             RETURNING id, type, description, timestamp;
         """
-        new_log = await conn.fetchrow(query_log, description)
+        new_log = await conn.fetchrow(query_log, description, home_id)
 
         # 2. create mapping
         query_config = """
@@ -60,7 +70,13 @@ async def log_admin_action(conn: asyncpg.Connection, admin_id: int, setting_id: 
 # ==========================================
 # 3. CONTAIN (Setting -> Device -> Log)
 # ==========================================
-async def log_system_trigger(conn: asyncpg.Connection, setting_id: int, device_id: int, description: str, log_type: str="system action") -> dict:
+async def log_system_trigger(
+        conn: asyncpg.Connection, 
+        setting_id: int, 
+        device_id: int, 
+        home_id: str, 
+        description: str, 
+        log_type: str="system action") -> dict:
     """
     logs when a schedule triggers a controller
     or a threshold triggers a sensor
@@ -68,11 +84,11 @@ async def log_system_trigger(conn: asyncpg.Connection, setting_id: int, device_i
     async with conn.transaction():
         # 1. create log
         query_log = """
-            INSERT INTO logs (type, description)
-            VALUES ($1, $2)
+            INSERT INTO logs (type, description, home_id)
+            VALUES ($1, $2, $3)
             RETURNING id, type, description, timestamp;
         """
-        new_log = await conn.fetchrow(query_log, description, log_type)
+        new_log = await conn.fetchrow(query_log, description, log_type, home_id)
 
         # 2. create mapping
         query_contain = """
@@ -89,7 +105,10 @@ async def log_system_trigger(conn: asyncpg.Connection, setting_id: int, device_i
 # ==========================================
 # FETCHING LOGS (For Module 4 UI)
 # ==========================================
-async def get_recent_logs(conn: asyncpg.Connection, limit: int = 50) -> list[dict]:
+async def get_recent_logs(
+        conn: asyncpg.Connection, 
+        home_id: str,
+        limit: int = 50) -> list[dict]:
     """
     fetch latest logs, dynamically pull in the associated
     User, Device, or Setting
@@ -117,13 +136,17 @@ async def get_recent_logs(conn: asyncpg.Connection, limit: int = 50) -> list[dic
         LEFT JOIN schedules sch ON sch.sid = COALESCE(c.setting_id, ct.setting_id)
         LEFT JOIN thresholds thr ON thr.sid = COALESCE(c.setting_id, ct.setting_id)
 
+        WHERE l.home_id = $1
         ORDER BY l.timestamp DESC
-        LIMIT $1;
+        LIMIT $2;
     """
-    records = await conn.fetch(query, limit)
+    records = await conn.fetch(query,home_id, limit)
     return [dict(record) for record in records]
 
-async def log_admin_delete_action(conn: asyncpg.Connection, admin_name: str, description: str) -> dict:
+async def log_admin_delete_action(
+        conn: asyncpg.Connection, 
+        admin_name: str, 
+        description: str) -> dict:
     full_description = f"{admin_name} {description}"
 
     query = """
