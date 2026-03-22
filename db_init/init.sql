@@ -150,6 +150,7 @@ CREATE TABLE config (
 );
 
 CREATE INDEX idx_logs_home_id ON logs(home_id);
+CREATE INDEX idx_users_home_id ON users(home_id);
 
 -- ==============================================================================
 -- TEST DATA

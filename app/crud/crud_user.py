@@ -5,33 +5,35 @@ from app.core.security import get_password_hash
 async def create_user(conn: asyncpg.Connection, user: UserCreate) -> dict:
     async with conn.transaction():
         query_base_user = """
-            INSERT INTO users (fname, lname, email, password)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, fname, lname, email, status;
+            INSERT INTO users (fname, lname, email, password, home_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, fname, lname, email, status, home_id;
         """
 
-        new_user_record = await conn.fetchrow(
+        record = await conn.fetchrow(
             query_base_user, 
             user.fname, 
             user.lname, 
             user.email, 
-            get_password_hash(user.password)
+            get_password_hash(user.password),
+            user.home_id
         )
         
-        user_id = new_user_record['id']
+        new_user = dict(record)
+        user_id = new_user.id
+        user_type = user.type.lower()
 
-        if user.type == "admin":
+        if user_type == "admin":
             await conn.execute(
                 "INSERT INTO admins (uid) VALUES ($1);", user_id
             )
-        elif user.type == "member":
+        elif user_type == "member":
             await conn.execute(
                 "INSERT INTO members (uid) VALUES ($1);", user_id
             )
 
-        result = dict(new_user_record)
-        result['type'] = user.type
-        return result
+        new_user['type'] = user_type
+        return new_user
         
 async def get_user_by_email(conn: asyncpg.Connection, email: str) -> dict | None:
     """

@@ -6,6 +6,7 @@ class UserBase(BaseModel):
     fname: str
     lname: str
     email: EmailStr
+    home_id: str
 
 # Properties required to create a user
 class UserCreate(UserBase):
