@@ -65,7 +65,7 @@ docker compose up -d --build
 ```
 ## 2. Access the Interactive API Dashboard
 Once running, open your browser to view the auto-generated Swagger UI. You can log in, create users, and test endpoints directly from here:
-👉 [http://localhost:8000/docs](http://localhost:8000/docs)
+[http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## 3. Watch the Live Logs
 Crucial for debugging MQTT messages coming from Adafruit IO or seeing backend crashes.
