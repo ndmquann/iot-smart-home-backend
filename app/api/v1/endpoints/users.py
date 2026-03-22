@@ -32,7 +32,7 @@ async def register_user(
     except ValueError as e:
         raise BadRequestException(str(e))
     except Exception as e:
-        raise DatabaseException(str(e))
+        raise DatabaseException(f"Failed to create user: {str(e)}")
     
 @router.get("/{email}", response_model=UserResponse)
 async def get_user(

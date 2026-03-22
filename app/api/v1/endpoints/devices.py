@@ -28,7 +28,7 @@ async def register_new_device(
         new_device = await crud_device.create_device(conn, device, admin_id)
         return new_device
     except Exception as e:
-        raise DatabaseException(str(e))
+        raise DatabaseException(f"Failed to create device: {str(e)}")
     
 @router.get("/", response_model=list[DeviceResponse])
 async def read_all_devices(

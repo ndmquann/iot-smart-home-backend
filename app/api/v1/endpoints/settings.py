@@ -24,7 +24,7 @@ async def create_new_schedule(
         await crud_log.log_admin_action(conn, admin_id, new_schedule['sid'], f"Created schedule {schedule.name}")
         return new_schedule
     except Exception as e:
-        raise DatabaseException(str(e))
+        raise DatabaseException(f"Failed to create schedule: {str(e)}")
     
 @router.get("/schedules", response_model=list[ScheduleResponse])
 async def read_all_schedules(
@@ -65,7 +65,7 @@ async def create_new_threshold(
         await crud_log.log_admin_action(conn, admin_id, new_threshold['sid'], f"Created threshold {threshold.name}")
         return new_threshold
     except Exception as e:
-        raise DatabaseException(str(e))
+        raise DatabaseException(f"Failed to create threshold: {str(e)}")
     
 @router.get("/thresholds", response_model=list[ThresholdResponse])
 async def read_all_thresholds(

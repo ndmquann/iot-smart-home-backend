@@ -23,7 +23,7 @@ async def create_new_zone(
         new_zone = await crud_zone.create_zone(conn, zone, admin_id)
         return new_zone
     except Exception as e:
-        raise DatabaseException(str(e))
+        raise DatabaseException(f"Failed to create zone: {str(e)}")
     
 @router.get("/", response_model=list[ZoneResponse])
 async def read_all_zones(
