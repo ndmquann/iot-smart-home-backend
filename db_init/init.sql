@@ -31,7 +31,8 @@ CREATE TABLE users (
     lname VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    status BOOLEAN DEFAULT TRUE
+    status BOOLEAN DEFAULT TRUE,
+    home_id VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE admins (
@@ -109,7 +110,8 @@ CREATE TABLE logs (
     id SERIAL PRIMARY KEY,
     type VARCHAR(255) NOT NULL CHECK (type IN ('user action', 'admin action', 'system action', 'sensor alert')),
     description TEXT,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    home_id VARCHAR(255) NOT NULL
 );
 
 -- Many to many
