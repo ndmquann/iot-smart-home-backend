@@ -155,9 +155,9 @@ CREATE INDEX idx_users_home_id ON users(home_id);
 -- ==============================================================================
 -- TEST DATA
 -- ==============================================================================
-INSERT INTO users (fname, lname, email, password) 
-VALUES ('test', 'admin', 'admin@gmail.com', 'admin'),
-       ('test', 'member', 'member@gmail.com', 'member');
+INSERT INTO users (fname, lname, email, password, home_id) 
+VALUES ('test', 'admin', 'admin@gmail.com', 'admin', 'HOME-test'),
+       ('test', 'member', 'member@gmail.com', 'member', 'HOME-test');
 
 INSERT INTO admins (uid) VALUES (1);
 INSERT INTO members (uid) VALUES (2);
