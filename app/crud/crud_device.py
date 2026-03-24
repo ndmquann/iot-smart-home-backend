@@ -132,3 +132,27 @@ async def delete_device(conn: asyncpg.Connection, device_id: int) -> str | None:
     if device_name:
         await conn.execute("DELETE FROM devices WHERE id = $1;", device_id)
     return device_name
+
+async def read_device_detail(conn: asyncpg.Connection, device_id: int) -> dict | None:
+    query = """
+        SELECT 
+            d.id,
+            d.name,
+            d.zone_id AS zone,
+            d.feed_id AS feed,
+            d.status,
+            s.value AS sensor_value,
+            c.mode AS controller_mode,
+            c.speed AS controller_speed,
+            CASE
+                WHEN s.did IS NOT NULL THEN 'sensor'
+                WHEN c.did IS NOT NULL THEN 'controller'
+                ELSE 'unknown'
+            END as type
+        FROM devices d
+        LEFT JOIN sensors s ON s.did = d.id
+        LEFT JOIN controllers c ON c.did = d.id
+        WHERE d.id = $1;
+    """
+    record = await conn.fetchrow(query, device_id)
+    return dict(record) if record else None

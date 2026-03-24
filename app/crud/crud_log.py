@@ -37,7 +37,7 @@ async def log_user_action(
 # ==========================================
 # 2. CONFIG (Admin -> Setting -> Log)
 # ==========================================
-async def log_admin_action(
+async def log_admin_config(
         conn: asyncpg.Connection, 
         admin_id: int, 
         setting_id: int, 
@@ -67,6 +67,22 @@ async def log_admin_action(
 
         return dict(new_log)
     
+async def log_admin_registry(
+        conn: asyncpg.Connection, 
+        home_id: str, 
+        description: str) -> dict:
+    """
+    logs when an admin registers a new device
+    """
+    query_log = """
+        INSERT INTO logs (type, description, home_id)
+        VALUES ('admin action', $1, $2)
+        RETURNING id, type, description, timestamp;
+    """
+    new_log = await conn.fetchrow(query_log, description, home_id)
+
+    return dict(new_log)
+
 # ==========================================
 # 3. CONTAIN (Setting -> Device -> Log)
 # ==========================================
@@ -117,7 +133,7 @@ async def get_recent_logs(
         SELECT l.id, l.type, l.description, l.timestamp,
             u.fname || ' ' || u.lname AS user_name,
             d.name AS device_name,
-            COALESCE(sch.name, thr.name) AS setting_name
+            set.name AS setting_name
         FROM logs l
         -- join interact to get user and controller
         LEFT JOIN interact i ON l.id = i.log_id
@@ -135,7 +151,7 @@ async def get_recent_logs(
         LEFT JOIN devices d ON d.did = COALESCE(d_interact.did, d_contain.did)
         LEFT JOIN schedules sch ON sch.sid = COALESCE(c.setting_id, ct.setting_id)
         LEFT JOIN thresholds thr ON thr.sid = COALESCE(c.setting_id, ct.setting_id)
-
+        LEFT JOIN settings set ON set.sid = COALESCE(c.setting_id, ct.setting_id)
         WHERE l.home_id = $1
         ORDER BY l.timestamp DESC
         LIMIT $2;
@@ -145,14 +161,15 @@ async def get_recent_logs(
 
 async def log_admin_delete_action(
         conn: asyncpg.Connection, 
-        admin_name: str, 
+        admin_name: str,
+        home_id: str,
         description: str) -> dict:
     full_description = f"{admin_name} {description}"
 
     query = """
-        INSERT INTO logs (type, description)
-        VALUES ('admin action', $1)
+        INSERT INTO logs (type, description, home_id)
+        VALUES ('admin action', $1, $2)
         RETURNING id, type, description, timestamp;
     """
-    new_log = await conn.fetchrow(query, full_description)
+    new_log = await conn.fetchrow(query, full_description, home_id)
     return dict(new_log)

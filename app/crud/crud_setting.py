@@ -8,22 +8,22 @@ async def create_schedule(conn: asyncpg.Connection, schedule: ScheduleCreate) ->
     async with conn.transaction():
         # 1. insert into base settings table
         query_base = """
-            INSERT INTO settings DEFAULT VALUES
+            INSERT INTO settings (name)
+            VALUES $1
             RETURNING sid;
         """
-        new_setting = await conn.fetchrow(query_base)
+        new_setting = await conn.fetchrow(query_base, schedule.name)
         sid = new_setting['sid']
 
         # 2. insert into schedules table
         query_schedule = """
-            INSERT INTO schedules (sid, name, date_start, date_end, time_start, timer)
+            INSERT INTO schedules (sid, date_start, date_end, time_start, timer)
             VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING name, date_start, date_end, time_start, timer;
+            RETURNING sid, date_start, date_end, time_start, timer;
         """
         schedule_data = await conn.fetchrow(
             query_schedule,
             sid,
-            schedule.name,
             schedule.date_start,
             schedule.date_end,
             schedule.time_start,
@@ -40,7 +40,7 @@ async def get_all_schedules(conn: asyncpg.Connection) -> list[dict]:
     list of existing schedules
     """
     query = """
-        SELECT set.sid, set.type, sch.name, sch.date_start, sch.date_end, sch.time_start, sch.timer
+        SELECT set.sid, set.type, set.name, sch.date_start, sch.date_end, sch.time_start, sch.timer
         FROM settings set
         JOIN schedules sch ON set.sid = sch.sid   
     """
@@ -54,22 +54,22 @@ async def create_threshold(conn: asyncpg.Connection, threshold: ThresholdCreate)
     async with conn.transaction():
         # 1. insert into base settings table
         query_base = """
-            INSERT INTO settings DEFAULT VALUES
+            INSERT INTO settings (name) 
+            VALUES $1
             RETURNING sid;
         """
-        new_setting = await conn.fetchrow(query_base)
+        new_setting = await conn.fetchrow(query_base, threshold.name)
         sid = new_setting['sid']
 
         # 2. insert into thresholds table
         query_threshold = """
-            INSERT INTO thresholds (sid, name, value, condition)
+            INSERT INTO thresholds (sid, value, condition)
             VALUES ($1, $2, $3, $4)
-            RETURNING name, value, condition;
+            RETURNING value, condition;
         """
         threshold_data = await conn.fetchrow(
             query_threshold,
             sid,
-            threshold.name,
             threshold.value,
             threshold.condition
         )
@@ -84,7 +84,7 @@ async def get_all_thresholds(conn: asyncpg.Connection) -> list[dict]:
     list of existing thresholds
     """
     query = """
-        SELECT set.sid, set.type, thr.name, thr.value, thr.condition
+        SELECT set.sid, set.type, set.name, thr.value, thr.condition
         FROM settings set
         JOIN thresholds thr ON set.sid = thr.sid   
     """
@@ -93,9 +93,9 @@ async def get_all_thresholds(conn: asyncpg.Connection) -> list[dict]:
 
 async def delete_setting(conn: asyncpg.Connection, setting_id: int) -> str | None:
     query = """
-        SELECT name FROM schedules WHERE sid = $1;
-        UNION
-        SELECT name FROM thresholds WHERE sid = $1;
+        SELECT name
+        FROM settings
+        WHERE sid = $1;
     """
     setting_name = await conn.fetchval(query, setting_id)
     if setting_name:

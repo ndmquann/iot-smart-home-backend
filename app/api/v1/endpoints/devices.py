@@ -26,6 +26,11 @@ async def register_new_device(
     try:
         admin_id = curr_admin['id']
         new_device = await crud_device.create_device(conn, device, admin_id)
+        await crud_log.log_admin_registry(
+            conn=conn,
+            home_id=curr_admin['home_id'],
+            description=f"{curr_admin['fname']} {curr_admin['lname']} created {device.type} {device.name}."
+        )
         return new_device
     except Exception as e:
         raise DatabaseException(f"Failed to create device: {str(e)}")
@@ -40,7 +45,7 @@ async def read_all_devices(
     devices = await crud_device.get_all_devices(conn)
     return devices
 
-@router.post("/{device_id}/toggle}")
+@router.post("/{device_id}/toggle")
 async def toggle_device(
     device_id: int,
     action: str, # 'on' or 'off'
@@ -78,7 +83,8 @@ async def toggle_device(
         conn=conn, 
         user_id=curr_user['id'], 
         device_id=device_id, 
-        description=description
+        description=description,
+        home_id=curr_user['home_id']
         )
     
     return {
@@ -110,7 +116,8 @@ async def set_device_mode(
         conn=conn, 
         user_id=curr_user['id'], 
         device_id=device_id, 
-        description=f"User set {device['name']}'s mode to {mode.upper()}."
+        description=f"User set {device['name']}'s mode to {mode.upper()}.",
+        home_id=curr_user['home_id']
     )
 
     return {
@@ -144,7 +151,8 @@ async def set_device_speed(
         conn=conn, 
         user_id=curr_user['id'], 
         device_id=device_id, 
-        description=f"User set {device['name']}'s speed to {speed}."
+        description=f"User set {device['name']}'s speed to {speed}.",
+        home_id=curr_user['home_id']
     )
 
     return {
@@ -165,9 +173,23 @@ async def remove_device(
     await crud_log.log_admin_delete_action(
         conn=conn, 
         admin_name=f"{curr_admin['fname']} {curr_admin['lname']}", 
+        home_id=curr_admin['home_id'],
         description=f"deleted device {device_name}."
     )
 
     return {
         "message": f"Successfully deleted '{device_name}'."
     }
+
+@router.get("/{device_id}/value/")
+async def read_device_state(
+    device_id: int,
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    get device state for display
+    """
+    device = await crud_device.read_device_detail(conn, device_id)
+    if not device:
+        raise NotFoundException(device_id)
+    return device  

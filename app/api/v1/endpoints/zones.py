@@ -21,6 +21,11 @@ async def create_new_zone(
     try:
         admin_id = curr_admin['id']
         new_zone = await crud_zone.create_zone(conn, zone, admin_id)
+        await crud_log.log_admin_registry(
+            conn=conn,
+            home_id=curr_admin['home_id'],
+            description=f"{curr_admin['fname']} {curr_admin['lname']} created zone {zone.room}."
+        )
         return new_zone
     except Exception as e:
         raise DatabaseException(f"Failed to create zone: {str(e)}")
@@ -69,6 +74,7 @@ async def remove_zone(
     await crud_log.log_admin_delete_action(
         conn=conn,
         admin_name=f"{curr_admin['fname']} {curr_admin['lname']}",
+        home_id=curr_admin['home_id'],
         description=f"deleted zone {zone_display}."
     )
 
@@ -96,6 +102,7 @@ async def remove_floor(
     await crud_log.log_admin_delete_action(
         conn=conn,
         admin_name=f"{curr_admin['fname']} {curr_admin['lname']}",
+        home_id=curr_admin['home_id'],
         description=log_description
     )
 

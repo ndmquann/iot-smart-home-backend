@@ -21,7 +21,7 @@ async def create_new_schedule(
     try:
         admin_id = curr_admin['id']
         new_schedule = await crud_setting.create_schedule(conn, schedule)
-        await crud_log.log_admin_action(conn, admin_id, new_schedule['sid'], f"Created schedule {schedule.name}")
+        await crud_log.log_admin_config(conn, admin_id, new_schedule['sid'], f"Created schedule {schedule.name}")
         return new_schedule
     except Exception as e:
         raise DatabaseException(f"Failed to create schedule: {str(e)}")
@@ -46,7 +46,7 @@ async def apply_schedule_to_controller(
     try:
         admin_id = curr_admin['id']
         await crud_setting.apply_schedule_to_controller(conn, schedule_id, controller_id)
-        await crud_log.log_admin_action(conn, admin_id, schedule_id, f"Applied schedule to controller {controller_id}")
+        await crud_log.log_admin_config(conn, admin_id, schedule_id, f"Applied schedule to controller {controller_id}")
     except Exception as e:
         raise BadRequestException("Failed to apply schedule. Ensure IDs exist.")
     
@@ -62,7 +62,7 @@ async def create_new_threshold(
     try:
         admin_id = curr_admin['id']
         new_threshold = await crud_setting.create_threshold(conn, threshold)
-        await crud_log.log_admin_action(conn, admin_id, new_threshold['sid'], f"Created threshold {threshold.name}")
+        await crud_log.log_admin_config(conn, admin_id, new_threshold['sid'], f"Created threshold {threshold.name}")
         return new_threshold
     except Exception as e:
         raise DatabaseException(f"Failed to create threshold: {str(e)}")
@@ -87,7 +87,11 @@ async def apply_threshold_to_sensor(
     try:
         admin_id = curr_admin['id']
         await crud_setting.apply_threshold_to_sensor(conn, threshold_id, sensor_id)
-        await crud_log.log_admin_action(conn, admin_id, threshold_id, f"Applied threshold to sensor {sensor_id}")
+        await crud_log.log_admin_config(
+            conn, 
+            admin_id, 
+            threshold_id, 
+            f"Applied threshold to sensor {sensor_id}")
     except Exception as e:
         raise BadRequestException("Failed to apply threshold. Ensure IDs exist.")
     
@@ -104,6 +108,7 @@ async def remove_setting(
     await crud_log.log_admin_delete_action(
         conn=conn, 
         admin_name=f"{curr_admin['fname']} {curr_admin['lname']}", 
+        home_id=curr_admin['home_id'],
         description=f"deleted setting cofiguration {setting_name}."
     )
 
