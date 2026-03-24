@@ -19,6 +19,7 @@ def on_message(client, userdata, msg):
     """Handle incoming MQTT messages."""
     topic = msg.topic
     payload = msg.payload.decode("utf-8")
+    # garbage return
     if (topic.endswith("/json") 
         or topic.endswith("/csv") 
         or topic.split("/")[-1].isdigit()):
@@ -38,7 +39,7 @@ async def process_mqtt_message(feed_id: str, payload: str):
     """Process incoming MQTT messages."""
     async with database.db_pool.acquire() as conn:
         try:
-            device = await crud_device.get_device_by_feed_id(conn, feed_id)
+            device = await crud_device.get_device_by_feed_id(conn, feed_id.split('-')[0])
 
             if not device:
                 raise NotFoundException(feed_id)
@@ -50,7 +51,7 @@ async def process_mqtt_message(feed_id: str, payload: str):
             
             elif device['type'] == "controller":
                 status = 'on' if payload == '1' else 'off'
-                await crud_device.update_device_status(conn, feed_id, status)
+                await crud_device.update_device_status(conn, feed_id.split('-')[0], status)
                 print(f"Controller status updated - Feed: {feed_id}, | Status: {payload}")
 
         except Exception as e:
