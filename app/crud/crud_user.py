@@ -1,8 +1,7 @@
 import asyncpg
 from app.schemas.user import UserCreate
-from app.core.security import get_password_hash
 
-async def create_user(conn: asyncpg.Connection, user: UserCreate) -> dict:
+async def create_user(conn: asyncpg.Connection, user: UserCreate, hashed_password) -> dict:
     async with conn.transaction():
         query_base_user = """
             INSERT INTO users (fname, lname, email, password, home_id)
@@ -15,12 +14,12 @@ async def create_user(conn: asyncpg.Connection, user: UserCreate) -> dict:
             user.fname, 
             user.lname, 
             user.email, 
-            get_password_hash(user.password),
+            hashed_password,
             user.home_id
         )
         
         new_user = dict(record)
-        user_id = new_user.id
+        user_id = new_user['id']
         user_type = user.type.lower()
 
         if user_type == "admin":
@@ -41,7 +40,7 @@ async def get_user_by_email(conn: asyncpg.Connection, email: str) -> dict | None
     """
     query = """
         SELECT 
-            u.id, u.fname, u.lname, u.email, u.status
+            u.id, u.fname, u.lname, u.email, u.password, u.status, u.home_id,
             CASE 
                 WHEN a.uid IS NOT NULL THEN 'admin'
                 WHEN m.uid IS NOT NULL THEN 'member'
