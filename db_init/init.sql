@@ -166,6 +166,10 @@ INSERT INTO zones (admin_id, floor, room)
 VALUES (1, 1, 'test room');
 
 INSERT INTO devices (admin_id, zone_id, name, status, feed_id) 
-VALUES (1, 1, 'test controller', 'OFF', 'led-control');
+VALUES (1, 1, 'test controller', 'ON', 'led-control'),
+VALUES (1, 1, 'test sensor', 'ON', 'temp'),
+VALUES (1, 1, 'test fan', 'ON', 'fan');
 
-INSERT INTO controllers (did) VALUES (1);
+INSERT INTO controllers (did) VALUES (1), VALUES (3);
+
+INSERT INTO sensors (did) VALUES (2);
