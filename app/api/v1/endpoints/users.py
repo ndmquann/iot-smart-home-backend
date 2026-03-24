@@ -4,6 +4,7 @@ import asyncpg
 from app.db.database import get_db_connection
 from app.schemas.user import UserCreate, UserResponse
 from app.crud import crud_user
+from app.core.security import get_password_hash
 from app.core.exceptions import BadRequestException, NotFoundException, DatabaseException
 
 router = APIRouter()
@@ -27,7 +28,8 @@ async def register_user(
 
     # 3. insert user into db
     try:
-        new_user = await crud_user.create_user(conn, user)
+        hashed_password = get_password_hash(user.password)
+        new_user = await crud_user.create_user(conn, user, hashed_password)
         return new_user
     except ValueError as e:
         raise BadRequestException(str(e))
