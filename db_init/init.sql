@@ -86,19 +86,18 @@ CREATE TABLE controllers (
 
 -- Settings
 CREATE TABLE settings (
-    id SERIAL PRIMARY KEY
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE thresholds (
     sid INTEGER PRIMARY KEY REFERENCES settings(id) ON DELETE CASCADE,
-    name VARCHAR(255),
     value FLOAT NOT NULL,
     condition BOOLEAN NOT NULL
 );
 
 CREATE TABLE schedules (
     sid INTEGER PRIMARY KEY REFERENCES settings(id) ON DELETE CASCADE,
-    name VARCHAR(255),
     date_start DATE NOT NULL,
     date_end DATE,
     time_start TIME NOT NULL,
@@ -155,21 +154,21 @@ CREATE INDEX idx_users_home_id ON users(home_id);
 -- ==============================================================================
 -- TEST DATA
 -- ==============================================================================
-INSERT INTO users (fname, lname, email, password, home_id) 
-VALUES ('test', 'admin', 'admin@gmail.com', 'admin', 'HOME-test'),
-       ('test', 'member', 'member@gmail.com', 'member', 'HOME-test');
+-- INSERT INTO users (fname, lname, email, password, home_id) 
+-- VALUES ('test', 'admin', 'admin@gmail.com', 'admin', 'HOME-test'),
+--        ('test', 'member', 'member@gmail.com', 'member', 'HOME-test');
 
-INSERT INTO admins (uid) VALUES (1);
-INSERT INTO members (uid) VALUES (2);
+-- INSERT INTO admins (uid) VALUES (1);
+-- INSERT INTO members (uid) VALUES (2);
 
-INSERT INTO zones (admin_id, floor, room) 
-VALUES (1, 1, 'test room');
+-- INSERT INTO zones (admin_id, floor, room) 
+-- VALUES (1, 1, 'test room');
 
-INSERT INTO devices (admin_id, zone_id, name, status, feed_id) 
-VALUES (1, 1, 'test controller', 'ON', 'led-control'),
-VALUES (1, 1, 'test sensor', 'ON', 'temp'),
-VALUES (1, 1, 'test fan', 'ON', 'fan');
+-- INSERT INTO devices (admin_id, zone_id, name, status, feed_id) 
+-- VALUES (1, 1, 'test controller', 'ON', 'led'),
+--     (1, 1, 'test sensor', 'ON', 'temp'),
+--     (1, 1, 'test fan', 'ON', 'fan');
 
-INSERT INTO controllers (did) VALUES (1), VALUES (3);
+-- INSERT INTO controllers (did) VALUES (1), (3);
 
-INSERT INTO sensors (did) VALUES (2);
+-- INSERT INTO sensors (did) VALUES (2);
