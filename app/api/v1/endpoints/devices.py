@@ -92,7 +92,7 @@ async def toggle_device(
         "feed_id": feed_id
     }
 
-@router.post("/{device_id}/mode/")
+@router.post("/{device_id}/mode")
 async def set_device_mode(
     device_id: int,
     mode: str, # 'manual' or 'auto'
@@ -124,7 +124,7 @@ async def set_device_mode(
         "message": f"Successfully set {device['name']}'s mode to {mode.upper()}."
     }
 
-@router.post("/{device_id}/speed/")
+@router.post("/{device_id}/speed")
 async def set_device_speed(
     device_id: int,
     speed: int,
@@ -181,7 +181,7 @@ async def remove_device(
         "message": f"Successfully deleted '{device_name}'."
     }
 
-@router.get("/{device_id}/value/")
+@router.get("/{device_id}/value")
 async def read_device_state(
     device_id: int,
     conn: asyncpg.Connection = Depends(get_db_connection)
