@@ -148,8 +148,35 @@ CREATE TABLE config (
     PRIMARY KEY (admin_id, setting_id, log_id)
 );
 
+CREATE TABLE sensor_history(
+    id SERIAL PRIMARY KEY,
+    did INTEGER REFERENCES sensors(did) ON DELETE CASCADE,
+    value FLOAT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX idx_logs_home_id ON logs(home_id);
 CREATE INDEX idx_users_home_id ON users(home_id);
+CREATE INDEX idx_sensor_history_did_time ON sensor_history(did, timestamp, DESC);
+
+-- ==============================================================================
+-- TRIGGER
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION log_sensor_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- only save to history if value has changed
+    IF OLD.value IS DISTINCT FROM NEW.value THEN
+        INSERT INTO sensor_history (did, value) 
+        VALUES (NEW.did, NEW.value);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER log_sensor_history
+AFTER UPDATE ON sensors
+FOR EACH ROW EXECUTE FUNCTION log_sensor_history();
 
 -- ==============================================================================
 -- TEST DATA

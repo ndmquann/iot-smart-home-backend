@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 # Shared properties
 class DeviceBase(BaseModel):
@@ -19,3 +20,10 @@ class DeviceResponse(DeviceBase):
     status: str
     type: str
     value: Optional[float] = None # display only for sensors
+
+class SensorHistoryResponse(BaseModel):
+    value: float
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True

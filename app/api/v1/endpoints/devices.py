@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query
+from typing import List
 import asyncpg
 
 from app.db.database import get_db_connection
-from app.schemas.device import DeviceCreate, DeviceResponse
+from app.schemas.device import DeviceCreate, DeviceResponse, SensorHistoryResponse
 from app.crud import crud_device, crud_log, crud_user
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import BadRequestException, NotFoundException, UnauthorizedException, DatabaseException
@@ -193,3 +194,20 @@ async def read_device_state(
     if not device:
         raise NotFoundException(device_id)
     return device  
+
+@router.get("/{device_id}/history", response_model=List[SensorHistoryResponse])
+async def read_device_history(
+    device_id: int,
+    limit: int = Query(50, description="Number of records to return."),
+    curr_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    device = await crud_device.read_device_detail(conn, device_id)
+    if not device:
+        raise NotFoundException(device_id)
+    
+    if device['type'] != 'sensor':
+        raise BadRequestException("Only sensors support history.")
+    
+    history = await crud_device.get_sensor_history(conn, device_id, limit)
+    return history

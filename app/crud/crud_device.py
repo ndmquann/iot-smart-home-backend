@@ -1,5 +1,10 @@
 import asyncpg
 from app.schemas.device import DeviceCreate
+from typing import List
+
+# ==========================================
+# CRUD
+# ==========================================
 
 async def create_device(conn: asyncpg.Connection, device: DeviceCreate, admin_id: int) -> dict:
     async with conn.transaction():
@@ -156,3 +161,21 @@ async def read_device_detail(conn: asyncpg.Connection, device_id: int) -> dict |
     """
     record = await conn.fetchrow(query, device_id)
     return dict(record) if record else None
+
+async def get_sensor_history(
+    conn: asyncpg.Connection,
+    device_id: int,
+    limit: int = 50
+) -> List[dict]:
+    """
+    fetch time-series data for a sensor
+    """
+    query = """
+        SELECT value, timestamp
+        FROM sensor_history
+        WHERE did = $1
+        ORDER BY timestamp DESC
+        LIMIT $2;
+    """
+    records = await conn.fetch(query, device_id, limit)
+    return [dict(record) for record in records]
