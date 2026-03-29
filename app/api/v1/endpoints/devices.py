@@ -76,7 +76,7 @@ async def toggle_device(
     feed_id = f"{device['feed_id']}-control" if device_type == 'controller' else device['feed_id']
     
     mqtt_value = '1' if action.lower() == 'on' else '0'
-    mqtt_service.publish_command(f"{device['feed_id']}-control", mqtt_value)
+    mqtt_service.publish_command(feed_id, mqtt_value)
 
     description = f"User manually turned {action} the {device_type}: {device['name']}."
     await crud_log.log_user_action(
