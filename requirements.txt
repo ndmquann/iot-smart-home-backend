@@ -4,7 +4,6 @@ psycopg2-binary
 pydantic-settings
 paho-mqtt
 asyncpg
-redis
 pydantic[email]
 passlib[bcrypt]
 bcrypt==3.2.2

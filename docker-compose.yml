@@ -12,14 +12,6 @@ services:
     ports:
       - "5432:5432"
 
-  # --- Redis Cache ---
-  redis:
-    image: redis:7-alpine
-    container_name: smart_home_redis
-    restart: always
-    ports:
-      - "6379:6379"
-
   # --- FastAPI ---
   api:
     build: .
@@ -29,7 +21,6 @@ services:
       - .env
     depends_on:
       - db
-      - redis
     ports:
       - "8000:8000"
     volumes:

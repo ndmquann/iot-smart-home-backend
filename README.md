@@ -58,7 +58,7 @@ The database used raw SQL to enforce a strictly normalized, high-performance sch
 Ensure Docker is already installed.
 
 ## 1. Start the Environment
-Build the containers and start the background services (FastAPI, PostgreSQL, Redis).
+Build the containers and start the background services (FastAPI, PostgreSQL).
 
 ```bash
 docker compose up -d --build
