@@ -140,3 +140,27 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER log_sensor_history
 AFTER UPDATE ON sensors
 FOR EACH ROW EXECUTE FUNCTION log_sensor_history();
+
+-- ==============================================================================
+-- VIEW
+-- ==============================================================================
+
+-- Home Group
+CREATE OR REPLACE VIEW home_group_view AS
+SELECT
+    h.id AS home_id,
+    h.name AS home_name,
+    u.id AS user_id,
+    u.fname,
+    u.lname,
+    u.email,
+    u.status,
+    CASE 
+        WHEN a.uid IS NOT NULL THEN 'admin'
+        WHEN m.uid IS NOT NULL THEN 'member'
+        ELSE  'unknown'
+    END AS user_type
+FROM users u
+JOIN homes h ON u.home_id = h.id
+LEFT JOIN admins a ON u.id = a.uid
+LEFT JOIN members m ON u.id = m.uid;
