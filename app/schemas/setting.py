@@ -1,17 +1,17 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import date, time
 
 class SettingBase(BaseModel):
     name: str
-    admin_id: int
+
 # ==========================================
 # SCHEDULE SCHEMAS (Module 3)
 # ==========================================
 class ScheduleBase(SettingBase):
-    date_start: datetime
-    date_end: Optional[datetime] = None
-    time_start: datetime
+    date_start: date
+    date_end: Optional[date] = None
+    time_start: time
     timer: Optional[int] = None
 
 class ScheduleCreate(ScheduleBase):
@@ -20,6 +20,7 @@ class ScheduleCreate(ScheduleBase):
 class ScheduleResponse(ScheduleBase):
     setting_id: int
     type: str
+    admin_id: int
     
     class Config:
         from_attributes = True
@@ -38,6 +39,7 @@ class ThresholdCreate(ThresholdBase):
 class ThresholdResponse(ThresholdBase):
     setting_id: int
     type: str
+    admin_id: int
 
     class Config:
         from_attributes = True
