@@ -3,7 +3,7 @@ import asyncpg
 
 from app.db.database import get_db_connection
 from app.schemas.user import UserCreate, UserResponse
-from app.crud import crud_user
+from app.crud import crud_user, crud_home
 from app.core.security import get_password_hash
 from app.core.exceptions import BadRequestException, NotFoundException, DatabaseException
 
@@ -28,9 +28,16 @@ async def register_user(
 
     # 3. insert user into db
     try:
-        hashed_password = get_password_hash(user.password)
-        new_user = await crud_user.create_user(conn, user, hashed_password)
-        return new_user
+        async with conn.transaction():
+            # create home and get home_id
+            home_id = await crud_home.create_home(conn, user.home_name)
+
+            # hash password
+            hashed_password = get_password_hash(user.password)
+
+            # create user
+            new_user = await crud_user.create_user(conn, user, hashed_password, home_id)
+            return new_user
     except ValueError as e:
         raise BadRequestException(str(e))
     except Exception as e:

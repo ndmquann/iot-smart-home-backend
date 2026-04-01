@@ -1,7 +1,7 @@
 import asyncpg
 from app.schemas.user import UserCreate
 
-async def create_user(conn: asyncpg.Connection, user: UserCreate, hashed_password) -> dict:
+async def create_user(conn: asyncpg.Connection, user: UserCreate, hashed_password: str, home_id: int) -> dict:
     async with conn.transaction():
         query_base_user = """
             INSERT INTO users (fname, lname, email, password, home_id)
@@ -15,7 +15,7 @@ async def create_user(conn: asyncpg.Connection, user: UserCreate, hashed_passwor
             user.lname, 
             user.email, 
             hashed_password,
-            user.home_id
+            home_id
         )
         
         new_user = dict(record)

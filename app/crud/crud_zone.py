@@ -62,7 +62,7 @@ async def delete_floor(conn: asyncpg.Connection, floor: int) -> list[str]:
     only delete if there is no rooms on this floor have devices
     """
     device_check = """
-        SELECT COUNT(d.did)
+        SELECT COUNT(d.device_id)
         FROM devices d
         JOIN zones z ON d.zone_id = z.id
         WHERE z.floor = $1;

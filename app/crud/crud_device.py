@@ -25,11 +25,11 @@ async def create_device(conn: asyncpg.Connection, device: DeviceCreate, admin_id
         device_id = new_device_record['id']
         if device.type == "controller":
             await conn.execute(
-                "INSERT INTO controllers (did) VALUES ($1);", device_id
+                "INSERT INTO controllers (device_id) VALUES ($1);", device_id
             )
         elif device.type == "sensor":
             await conn.execute(
-                "INSERT INTO sensors (did) VALUES ($1);", device_id
+                "INSERT INTO sensors (device_id) VALUES ($1);", device_id
             )
         
         result = dict(new_device_record)
@@ -46,12 +46,12 @@ async def get_all_devices(conn: asyncpg.Connection) -> list[dict]:
             d.id, d.admin_id, d.zone_id, d.name, d.status, d.feed_id,
             s.value,
             CASE 
-                WHEN c.did IS NOT NULL THEN 'controller'
-                WHEN s.did IS NOT NULL THEN 'sensor'
+                WHEN c.device_id IS NOT NULL THEN 'controller'
+                WHEN s.device_id IS NOT NULL THEN 'sensor'
             END AS type
         FROM devices d
-        LEFT JOIN controllers c ON d.id = c.did
-        LEFT JOIN sensors s ON d.id = s.did
+        LEFT JOIN controllers c ON d.id = c.device_id
+        LEFT JOIN sensors s ON d.id = s.device_id
         ORDER BY d.zone_id, d.name;
     """
     records = await conn.fetch(query)
@@ -79,7 +79,7 @@ async def update_sensor_value(conn: asyncpg.Connection, feed_id: str, value: flo
             UPDATE sensors
             SET value = $1
             FROM devices d
-            WHERE did = d.id AND d.feed_id = $2
+            WHERE device_id = d.id AND d.feed_id = $2
         """
         await conn.execute(query, value, feed_id)
 
@@ -91,12 +91,12 @@ async def get_device_by_feed_id(conn: asyncpg.Connection, feed_id: str) -> dict 
         SELECT
             d.id,
             CASE
-                WHEN s.did IS NOT NULL THEN 'sensor'
-                WHEN c.did IS NOT NULL THEN 'controller'
+                WHEN s.device_id IS NOT NULL THEN 'sensor'
+                WHEN c.device_id IS NOT NULL THEN 'controller'
             END AS type
         FROM devices d
-        LEFT JOIN sensors s ON d.id = s.did
-        LEFT JOIN controllers c ON d.id = c.did
+        LEFT JOIN sensors s ON d.id = s.device_id
+        LEFT JOIN controllers c ON d.id = c.device_id
         WHERE d.feed_id = $1
     """
     record = await conn.fetchrow(query, feed_id)
@@ -115,7 +115,7 @@ async def update_controller_mode(conn: asyncpg.Connection, device_id: int, mode:
     query = """
         UPDATE controllers
         SET mode = $1
-        WHERE did = $2
+        WHERE device_id = $2
     """
     await conn.execute(query, mode, device_id)
 
@@ -123,7 +123,7 @@ async def update_controller_speed(conn: asyncpg.Connection, device_id: int, spee
     query = """
         UPDATE controllers
         SET speed = $1
-        WHERE did = $2
+        WHERE device_id = $2
     """
     await conn.execute(query, speed, device_id)
 
@@ -150,13 +150,13 @@ async def read_device_detail(conn: asyncpg.Connection, device_id: int) -> dict |
             c.mode AS controller_mode,
             c.speed AS controller_speed,
             CASE
-                WHEN s.did IS NOT NULL THEN 'sensor'
-                WHEN c.did IS NOT NULL THEN 'controller'
+                WHEN s.device_id IS NOT NULL THEN 'sensor'
+                WHEN c.device_id IS NOT NULL THEN 'controller'
                 ELSE 'unknown'
             END as type
         FROM devices d
-        LEFT JOIN sensors s ON s.did = d.id
-        LEFT JOIN controllers c ON c.did = d.id
+        LEFT JOIN sensors s ON s.device_id = d.id
+        LEFT JOIN controllers c ON c.device_id = d.id
         WHERE d.id = $1;
     """
     record = await conn.fetchrow(query, device_id)
@@ -173,7 +173,7 @@ async def get_sensor_history(
     query = """
         SELECT value, timestamp
         FROM sensor_history
-        WHERE did = $1
+        WHERE device_id = $1
         ORDER BY timestamp DESC
         LIMIT $2;
     """
