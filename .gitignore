@@ -32,7 +32,6 @@ venv.bak/
 # Ignore local database data mapped from Docker containers
 postgres_data/
 pgdata/
-*.rdb
 
 # ==========================================
 # 5. IDE & EDITOR SETTINGS
