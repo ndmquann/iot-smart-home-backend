@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 import asyncpg
 
 from app.db.database import get_db_connection
+from app.schemas.log import LogCreate
 from app.schemas.zone import ZoneCreate, ZoneResponse
 from app.crud import crud_zone, crud_log
 from app.api.dependencies import get_current_admin
@@ -21,11 +22,15 @@ async def create_new_zone(
     try:
         admin_id = curr_admin['id']
         new_zone = await crud_zone.create_zone(conn, zone, admin_id)
-        await crud_log.log_admin_registry(
-            conn=conn,
-            home_id=curr_admin['home_id'],
-            description=f"{curr_admin['fname']} {curr_admin['lname']} created zone {zone.room}."
+        admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
+        description = f"{admin} created Room '{zone.room} ({zone.floor})'."
+        log = LogCreate(
+            type="admin action",
+            description=description,
+            home_id=curr_admin['home_id']
         )
+        await crud_log.create_log(conn, log)
+
         return new_zone
     except Exception as e:
         raise DatabaseException(f"Failed to create zone: {str(e)}")
@@ -71,15 +76,18 @@ async def remove_zone(
     floor = zone_info['floor']
     zone_display = f"{room} ({floor})" if floor else room
 
-    await crud_log.log_admin_delete_action(
-        conn=conn,
-        admin_name=f"{curr_admin['fname']} {curr_admin['lname']}",
-        home_id=curr_admin['home_id'],
-        description=f"deleted zone {zone_display}."
+    admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
+    description = f"{admin} deleted Room '{zone_display}'."
+    log = LogCreate(
+        type="admin action",
+        description=description,
+        home_id=curr_admin['home_id']
     )
+    await crud_log.create_log(conn, log)
+
 
     return {
-        "message": f"Successfully deleted '{zone_display}'."
+        "message": f"Successfully deleted Room '{zone_display}'."
     }
 
 @router.delete("/floor/{floor}")
@@ -96,17 +104,18 @@ async def remove_floor(
     if not deleted_rooms:
         raise NotFoundException(floor)
     
+    admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     rooms = ", ".join(deleted_rooms)
-    log_description = f"deleted floor {floor} (removed rooms: {rooms})."
+    description = f"{admin} deleted Floor {floor} (removed rooms: {rooms})."
 
-    await crud_log.log_admin_delete_action(
-        conn=conn,
-        admin_name=f"{curr_admin['fname']} {curr_admin['lname']}",
-        home_id=curr_admin['home_id'],
-        description=log_description
+    log = LogCreate(
+        type="admin action",
+        description=description,
+        home_id=curr_admin['home_id']
     )
+    await crud_log.create_log(conn, log)
 
     return {
-        "message": f"Successfully deleted floor {floor}.",
+        "message": f"Successfully deleted Floor {floor}.",
         "deleted_rooms": deleted_rooms
     }
