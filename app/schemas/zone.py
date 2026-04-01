@@ -14,3 +14,6 @@ class ZoneCreate(ZoneBase):
 class ZoneResponse(ZoneBase):
     id: int
     admin_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True

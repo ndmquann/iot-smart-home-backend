@@ -21,6 +21,9 @@ class DeviceResponse(DeviceBase):
     type: str
     value: Optional[float] = None # display only for sensors
 
+    class Config:
+        from_attributes = True
+        
 class SensorHistoryResponse(BaseModel):
     value: float
     timestamp: datetime
