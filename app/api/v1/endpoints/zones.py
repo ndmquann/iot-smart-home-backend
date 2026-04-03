@@ -5,7 +5,7 @@ from app.db.database import get_db_connection
 from app.schemas.log import LogCreate
 from app.schemas.zone import ZoneCreate, ZoneResponse
 from app.crud import crud_zone, crud_log
-from app.api.dependencies import get_current_admin
+from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import DatabaseException, NotFoundException, BadRequestException
 
 router = APIRouter()
@@ -37,25 +37,29 @@ async def create_new_zone(
     
 @router.get("/", response_model=list[ZoneResponse])
 async def read_all_zones(
+    curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
     get all zones to display on dashboard
     """
-    zones = await crud_zone.get_all_zones(conn)
+    zones = await crud_zone.get_all_zones(conn, curr_user['home_id'])
+    if not zones:
+        raise NotFoundException(f"Home ID {curr_user['home_id']} has no zones.")
     return zones
 
 @router.get("/{floor}", response_model=list[ZoneResponse])
 async def read_zones_by_floor(
     floor: int,
+    curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
     get all rooms in a floor
     """
-    zones = await crud_zone.get_zone_by_floor(conn, floor)
+    zones = await crud_zone.get_zone_by_floor(conn, floor, curr_user['home_id'])
     if not zones:
-        raise NotFoundException(floor)
+        raise NotFoundException(f"Floor {floor} not found in Home ID {curr_user['home_id']}.")
     return zones
 
 @router.delete("/{zone_id}")
@@ -70,7 +74,7 @@ async def remove_zone(
         raise BadRequestException(str(e))
     
     if not zone_info:
-        raise NotFoundException(zone_id)
+        raise NotFoundException(f"Zone ID {zone_id} not found in Home ID {curr_admin['home_id']}.")
     
     room = zone_info['room']
     floor = zone_info['floor']
@@ -102,7 +106,7 @@ async def remove_floor(
         raise BadRequestException(str(e))
     
     if not deleted_rooms:
-        raise NotFoundException(floor)
+        raise NotFoundException(f"Floor {floor} not found in Home ID {curr_admin['home_id']}.")
     
     admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     rooms = ", ".join(deleted_rooms)

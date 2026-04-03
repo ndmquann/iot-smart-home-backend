@@ -42,7 +42,7 @@ async def process_mqtt_message(feed_id: str, payload: str):
             device = await crud_device.get_device_by_feed_id(conn, feed_id.split('-')[0])
 
             if not device:
-                raise NotFoundException(feed_id)
+                raise NotFoundException(f"No device found for feed ID {feed_id}.")
             
             if device['type'] == "sensor":
                 sensor_value = float(payload)

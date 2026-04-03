@@ -41,12 +41,15 @@ async def register_new_device(
     
 @router.get("/", response_model=list[DeviceResponse])
 async def read_all_devices(
+    curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
     get all devices to display on dashboard
     """
-    devices = await crud_device.get_all_devices(conn)
+    devices = await crud_device.get_all_devices(conn, curr_user['home_id'])
+    if not devices:
+        raise NotFoundException(f"Home ID {curr_user['home_id']} has no devices.")
     return devices
 
 @router.post("/{device_id}/toggle")
@@ -63,7 +66,7 @@ async def toggle_device(
     # verify device
     device = await crud_device.get_device_by_id(conn, device_id)
     if not device:
-        raise NotFoundException(device_id)
+        raise NotFoundException(f"Device ID {device_id} not found.")
     
     # check device's type
     device_type_info = await crud_device.get_device_by_feed_id(conn, device['feed_id'])
@@ -109,7 +112,7 @@ async def set_device_mode(
     
     device = await crud_device.get_device_by_id(conn, device_id)
     if not device:
-        raise NotFoundException(device_id)
+        raise NotFoundException(f"Device ID {device_id} not found.")
     
     device_type_info = await crud_device.get_device_by_feed_id(conn, device['feed_id'])
     if not device_type_info or device_type_info['type'] != 'controller':
@@ -142,7 +145,7 @@ async def set_device_speed(
     
     device = await crud_device.get_device_by_id(conn, device_id)
     if not device:
-        raise NotFoundException(device_id)
+        raise NotFoundException(f"Device ID {device_id} not found.")
     
     device_type_info = await crud_device.get_device_by_feed_id(conn, device['feed_id'])
     if not device_type_info or device_type_info['type'] != 'controller':
@@ -175,7 +178,7 @@ async def remove_device(
 ):
     device_name = await crud_device.delete_device(conn, device_id)
     if not device_name:
-        raise NotFoundException(device_id)
+        raise NotFoundException(f"Device ID {device_id} not found.")
     
     admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     description = f"{admin} deleted device '{device_name}'."
@@ -200,7 +203,7 @@ async def read_device_state(
     """
     device = await crud_device.read_device_detail(conn, device_id)
     if not device:
-        raise NotFoundException(device_id)
+        raise NotFoundException(f"Device ID {device_id} not found.")
     return device  
 
 @router.get("/{device_id}/history", response_model=List[SensorHistoryResponse])
@@ -211,7 +214,7 @@ async def read_device_history(
 ):
     device = await crud_device.read_device_detail(conn, device_id)
     if not device:
-        raise NotFoundException(device_id)
+        raise NotFoundException(f"Device ID {device_id} not found.")
     
     if device['type'] != 'sensor':
         raise BadRequestException("Only sensors support history.")

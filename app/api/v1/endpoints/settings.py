@@ -86,7 +86,7 @@ async def remove_setting(
 ):
     setting_name = await crud_setting.delete_setting(conn, setting_id)
     if not setting_name:
-        raise NotFoundException(setting_id)
+        raise NotFoundException(f"Setting ID {setting_id} not found.")
     
     admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     description = f"{admin} deleted setting '{setting_name}'."

@@ -53,5 +53,5 @@ async def get_user(
     """
     user = await crud_user.get_user_by_email(conn, email)
     if not user:
-        raise NotFoundException(email)
+        raise NotFoundException(f"User with email {email} not found.")
     return user

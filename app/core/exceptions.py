@@ -6,9 +6,9 @@ class SmartHomeException(Exception):
         self.status_code = status_code
 
 class NotFoundException(SmartHomeException):
-    def __init__(self, item: str):
+    def __init__(self, detail: str):
         super().__init__(
-            message=f"The requested {item} could not be found.", 
+            message=detail, 
             error_code="NOT_FOUND", 
             status_code=404
         )
