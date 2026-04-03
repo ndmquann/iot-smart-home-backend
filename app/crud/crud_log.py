@@ -2,13 +2,14 @@ import asyncpg
 from app.schemas.log import LogBase
 
 async def create_log(conn: asyncpg.Connection, log: LogBase) -> dict:
-    query = """
-        INSERT INTO logs (type, description, home_id)
-        VALUES ($1, $2, $3)
-        RETURNING id, type, description, timestamp;
-    """
-    new_log = await conn.fetchrow(query, log.type, log.description, log.home_id)
-    return dict(new_log)
+    async with conn.transaction():
+        query = """
+            INSERT INTO logs (type, description, home_id)
+            VALUES ($1, $2, $3)
+            RETURNING id, type, description, timestamp;
+        """
+        new_log = await conn.fetchrow(query, log.type, log.description, log.home_id)
+        return dict(new_log)
     
 # ==========================================
 # FETCHING LOGS (For Module 4 UI)
