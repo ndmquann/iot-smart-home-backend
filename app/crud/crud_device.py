@@ -1,6 +1,7 @@
 import asyncpg
 from app.schemas.device import DeviceCreate
 from typing import List
+from app.utils import Utils
 
 # ==========================================
 # CRUD
@@ -37,10 +38,11 @@ async def create_device(conn: asyncpg.Connection, device: DeviceCreate, admin_id
         result['value'] = None
         return result
 
-async def get_all_devices(conn: asyncpg.Connection) -> list[dict]:
+async def get_all_devices(conn: asyncpg.Connection, home_id: int) -> list[dict]:
     """
-    list of devices order by zone_id and name
+    list of devices in a home order by zone_id and name
     """
+    admin_id = await Utils.get_admin_of_home(conn, home_id)
     query = """
         SELECT  
             d.id, d.admin_id, d.zone_id, d.name, d.status, d.feed_id,
@@ -52,9 +54,10 @@ async def get_all_devices(conn: asyncpg.Connection) -> list[dict]:
         FROM devices d
         LEFT JOIN controllers c ON d.id = c.device_id
         LEFT JOIN sensors s ON d.id = s.device_id
+        WHERE d.admin_id = $1
         ORDER BY d.zone_id, d.name;
     """
-    records = await conn.fetch(query)
+    records = await conn.fetch(query, admin_id)
     return [dict(record) for record in records]
 
 async def update_device_status(conn: asyncpg.Connection, feed_id: str, status: str) -> None:

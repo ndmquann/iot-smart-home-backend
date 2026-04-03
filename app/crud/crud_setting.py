@@ -1,5 +1,6 @@
 import asyncpg
 from app.schemas.setting import ScheduleCreate, ThresholdCreate
+from app.utils import Utils
 
 # ==========================================
 # SCHEDULE CRUD
@@ -43,12 +44,7 @@ async def get_all_schedules(conn: asyncpg.Connection, home_id: int) -> list[dict
     """
     list of existing schedules of a home (admin and member can view schedules)
     """
-    query_admin = """
-        SELECT user_id
-        FROM home_group_view
-        WHERE home_id = $1 and user_type = 'admin';
-    """
-    admin_id = await conn.fetchval(query_admin, home_id)
+    admin_id = await Utils.get_admin_of_home(conn, home_id)
 
     query = """
         SELECT 
@@ -107,12 +103,8 @@ async def get_all_thresholds(conn: asyncpg.Connection, home_id: int) -> list[dic
     """
     list of existing thresholds
     """
-    query_admin = """
-        SELECT user_id
-        FROM home_group_view
-        WHERE home_id = $1 and user_type = 'admin';
-    """
-    admin_id = await conn.fetchval(query_admin, home_id)
+    admin_id = await Utils.get_admin_of_home(conn, home_id)
+    
     query = """
         SELECT 
             set.id AS setting_id, 
