@@ -63,6 +63,60 @@ async def get_all_schedules(conn: asyncpg.Connection, home_id: int) -> list[dict
     records = await conn.fetch(query, admin_id)
     return [dict(record) for record in records]
 
+async def get_schedule_by_id(conn: asyncpg.Connection, setting_id: int) -> dict | None:
+    query = """
+        SELECT 
+            set.id AS setting_id, 
+            set.admin_id,
+            'schedule' AS type,
+            set.name, 
+            sch.date_start, 
+            sch.date_end, 
+            sch.time_start, 
+            sch.timer
+        FROM settings set
+        JOIN schedules sch ON set.id = sch.setting_id
+        WHERE set.id = $1;
+    """
+    record = await conn.fetchrow(query, setting_id)
+    return dict(record) if record else None
+
+async def update_schedule(
+    conn: asyncpg.Connection,
+    setting_id: int,
+    new_name: str,
+    new_schedule: ScheduleCreate,
+    admin_id: int
+):
+    """
+    update existing schedule
+    """
+    async with conn.transaction():
+        # 1. update base settings table
+        query_base = """
+            UPDATE settings
+            SET name = $1
+            WHERE id = $2 AND admin_id = $3
+            RETURNING id, name, admin_id;
+        """
+        await conn.fetchrow(query_base, new_name, setting_id, admin_id)
+
+        # 2. update schedules table
+        query_schedule = """
+            UPDATE schedules
+            SET date_start = $1, date_end = $2, time_start = $3, timer = $4
+            WHERE setting_id = $5
+            RETURNING setting_id, date_start, date_end, time_start, timer;
+        """
+        await conn.fetchrow(
+            query_schedule,
+            new_schedule.date_start,
+            new_schedule.date_end,
+            new_schedule.time_start,
+            new_schedule.timer,
+            setting_id
+        )
+    
 # ==========================================
 # THRESHOLD CRUD
 # ==========================================
@@ -120,15 +174,65 @@ async def get_all_thresholds(conn: asyncpg.Connection, home_id: int) -> list[dic
     records = await conn.fetch(query, admin_id)
     return [dict(record) for record in records]
 
+async def get_threshold_by_id(conn: asyncpg.Connection, setting_id: int) -> dict | None:
+    query = """
+        SELECT 
+            set.id AS setting_id, 
+            set.admin_id, 
+            'threshold' AS type,
+            set.name, 
+            thr.value, 
+            thr.condition
+        FROM settings set
+        JOIN thresholds thr ON set.id = thr.setting_id
+        WHERE set.id = $1
+    """
+    record = await conn.fetchrow(query, setting_id)
+    return dict(record) if record else None
+
+async def update_threshold(
+    conn: asyncpg.Connection,
+    setting_id: int,
+    new_name: str,
+    new_threshold: ThresholdCreate,
+    admin_id: int
+):
+    """
+    update existing threshold
+    """
+    async with conn.transaction():
+        # 1. update base settings table
+        query_base = """
+            UPDATE settings
+            SET name = $1
+            WHERE id = $2 AND admin_id = $3
+            RETURNING id, name, admin_id;
+        """
+        await conn.fetchrow(query_base, new_name, setting_id, admin_id)
+
+        # 2. update thresholds table
+        query_threshold = """    
+            UPDATE thresholds
+            SET value = $1, condition = $2
+            WHERE setting_id = $3
+            RETURNING setting_id, value, condition;
+        """
+        await conn.fetchrow(
+            query_threshold,
+            new_threshold.value,
+            new_threshold.condition,
+            setting_id
+        )
+    
 async def delete_setting(conn: asyncpg.Connection, setting_id: int) -> str | None:
     query = """
         SELECT name
         FROM settings
-        WHERE setting_id = $1;
+        WHERE id = $1;
     """
     setting_name = await conn.fetchval(query, setting_id)
     if setting_name:
-        await conn.execute("DELETE FROM settings WHERE setting_id = $1;", setting_id)
+        await conn.execute("DELETE FROM settings WHERE id = $1;", setting_id)
     return setting_name
 
 # ==========================================
