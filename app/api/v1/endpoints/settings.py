@@ -3,10 +3,11 @@ import asyncpg
 
 from app.db.database import get_db_connection
 from app.schemas.setting import ScheduleCreate, ScheduleResponse, ThresholdCreate, ThresholdResponse
-from app.crud import crud_setting, crud_log
+from app.crud import crud_setting
 from app.schemas.log import LogCreate
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException
+from app.utils import Utils
 
 router = APIRouter()
 
@@ -21,14 +22,11 @@ async def create_new_schedule(
     """
     try:
         new_schedule = await crud_setting.create_schedule(conn, schedule, curr_admin['id'])
+
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = f"{admin} created Schedule '{schedule.name}'."
-        log = LogCreate(
-            type="admin action",
-            description=description,
-            home_id=curr_admin['home_id']
-        )
-        await crud_log.create_log(conn, log)
+        await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
+        
         return new_schedule
     except Exception as e:
         raise DatabaseException(f"Failed to create schedule: {str(e)}")
@@ -55,14 +53,11 @@ async def create_new_threshold(
     """
     try:
         new_threshold = await crud_setting.create_threshold(conn, threshold, curr_admin['id'])
+
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = f"{admin} created Threshold '{threshold.name}'."
-        log = LogCreate(
-            type="admin action",
-            description=description,
-            home_id=curr_admin['home_id']
-        )
-        await crud_log.create_log(conn, log)
+        await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
+
         return new_threshold
     except Exception as e:
         raise DatabaseException(f"Failed to create threshold: {str(e)}")
@@ -90,12 +85,7 @@ async def remove_setting(
     
     admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     description = f"{admin} deleted setting '{setting_name}'."
-    log = LogCreate(
-        type="admin action",
-        description=description,
-        home_id=curr_admin['home_id']
-    )
-    await crud_log.create_log(conn, log)
+    await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
     return {
         "message": f"Successfully deleted '{setting_name}'."

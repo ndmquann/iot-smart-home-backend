@@ -4,9 +4,10 @@ import asyncpg
 from app.db.database import get_db_connection
 from app.schemas.log import LogCreate
 from app.schemas.zone import ZoneCreate, ZoneResponse
-from app.crud import crud_zone, crud_log
+from app.crud import crud_zone
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import DatabaseException, NotFoundException, BadRequestException
+from app.utils import Utils
 
 router = APIRouter()
 
@@ -20,16 +21,11 @@ async def create_new_zone(
     create a new zone
     """
     try:
-        admin_id = curr_admin['id']
-        new_zone = await crud_zone.create_zone(conn, zone, admin_id)
+        new_zone = await crud_zone.create_zone(conn, zone, curr_admin['id'])
+
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = f"{admin} created Room '{zone.room} ({zone.floor})'."
-        log = LogCreate(
-            type="admin action",
-            description=description,
-            home_id=curr_admin['home_id']
-        )
-        await crud_log.create_log(conn, log)
+        await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
         return new_zone
     except Exception as e:
@@ -82,13 +78,7 @@ async def remove_zone(
 
     admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     description = f"{admin} deleted Room '{zone_display}'."
-    log = LogCreate(
-        type="admin action",
-        description=description,
-        home_id=curr_admin['home_id']
-    )
-    await crud_log.create_log(conn, log)
-
+    await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
     return {
         "message": f"Successfully deleted Room '{zone_display}'."
@@ -112,12 +102,7 @@ async def remove_floor(
     rooms = ", ".join(deleted_rooms)
     description = f"{admin} deleted Floor {floor} (removed rooms: {rooms})."
 
-    log = LogCreate(
-        type="admin action",
-        description=description,
-        home_id=curr_admin['home_id']
-    )
-    await crud_log.create_log(conn, log)
+    await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
     return {
         "message": f"Successfully deleted Floor {floor}.",

@@ -4,11 +4,12 @@ import asyncpg
 
 from app.db.database import get_db_connection
 from app.schemas.device import DeviceCreate, DeviceResponse, SensorHistoryResponse
-from app.crud import crud_device, crud_log, crud_user
+from app.crud import crud_device, crud_user
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import BadRequestException, NotFoundException, UnauthorizedException, DatabaseException
 from app.schemas.log import LogCreate
 from app.services import mqtt as mqtt_service
+from app.utils import Utils
 
 router = APIRouter()
 
@@ -25,16 +26,12 @@ async def register_new_device(
         raise BadRequestException("Device type must be either 'sensor' or 'controller'.")
     
     try:
-        admin_id = curr_admin['id']
-        new_device = await crud_device.create_device(conn, device, admin_id)
+        new_device = await crud_device.create_device(conn, device, curr_admin['id'])
+
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = f"{admin} created {device.type.capitalize()} '{device.name}'."
-        log = LogCreate(
-            type="admin action",
-            description=description,
-            home_id=curr_admin['home_id']
-        )
-        await crud_log.create_log(conn, log)
+        await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
+
         return new_device
     except Exception as e:
         raise DatabaseException(f"Failed to create device: {str(e)}")
@@ -87,13 +84,7 @@ async def toggle_device(
 
     user = f"{curr_user['fname']} {curr_user['lname']}".title()
     description = f"{user} manually turned {action.upper()} the {device_type.capitalize()}: {device['name']}."
-    
-    log = LogCreate(
-        type="user action",
-        description=description,
-        home_id=curr_user['home_id']
-        )
-    await crud_log.create_log(conn, log)
+    await Utils.generate_log(conn, description, "user action", curr_user['home_id'])
     
     return {
         "message": f"Successfully sent {action.upper()} command to {device['name']}.",
@@ -122,12 +113,7 @@ async def set_device_mode(
 
     user = f"{curr_user['fname']} {curr_user['lname']}".title()
     description = f"{user} set {device['name']}'s mode to {mode.upper()}."
-    log = LogCreate(
-        type="user action",
-        description=description,
-        home_id=curr_user['home_id']
-    )
-    await crud_log.create_log(conn, log)
+    await Utils.generate_log(conn, description, "user action", curr_user['home_id'])
 
     return {
         "message": f"Successfully set {device['name']}'s mode to {mode.upper()}."
@@ -158,12 +144,7 @@ async def set_device_speed(
 
     user = f"{curr_user['fname']} {curr_user['lname']}".title()
     description = f"{user} set {device['name']}'s speed to {speed}."
-    log = LogCreate(
-        type="user action",
-        description=description,
-        home_id=curr_user['home_id']
-    )
-    await crud_log.create_log(conn, log)
+    await Utils.generate_log(conn, description, "user action", curr_user['home_id'])
 
     return {
         "message": f"Successfully set {device['name']}'s speed to {speed}.",
@@ -182,12 +163,7 @@ async def remove_device(
     
     admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     description = f"{admin} deleted device '{device_name}'."
-    log = LogCreate(
-        type="admin action",
-        description=description,
-        home_id=curr_admin['home_id']
-    )
-    await crud_log.create_log(conn, log)
+    await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
     return {
         "message": f"Successfully deleted '{device_name}'."
