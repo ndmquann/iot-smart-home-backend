@@ -4,7 +4,6 @@ import asyncpg
 from app.db.database import get_db_connection
 from app.schemas.setting import ScheduleCreate, ScheduleResponse, ThresholdCreate, ThresholdResponse
 from app.crud import crud_setting
-from app.schemas.log import LogCreate
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException
 from app.utils import Utils

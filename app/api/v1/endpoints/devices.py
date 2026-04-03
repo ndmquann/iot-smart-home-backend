@@ -7,7 +7,6 @@ from app.schemas.device import DeviceCreate, DeviceResponse, SensorHistoryRespon
 from app.crud import crud_device, crud_user
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import BadRequestException, NotFoundException, UnauthorizedException, DatabaseException
-from app.schemas.log import LogCreate
 from app.services import mqtt as mqtt_service
 from app.utils import Utils
 

@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, status
 import asyncpg
 
 from app.db.database import get_db_connection
-from app.schemas.log import LogCreate
 from app.schemas.zone import ZoneCreate, ZoneResponse
 from app.crud import crud_zone
 from app.api.dependencies import get_current_admin, get_current_user
