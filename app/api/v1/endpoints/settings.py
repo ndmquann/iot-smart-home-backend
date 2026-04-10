@@ -192,7 +192,7 @@ async def apply_setting(
         # Log the action beautifully
         admin_name = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = (f"{admin_name} successfully applied {result['setting_type']} "
-                       f"(ID: {setting_id}) to {result['device_type']} (ID: {device_id}).")
+                       f"'{result['setting_name']}' to {result['device_type']} {result['device_name']}.")
         
         await Utils.generate_log(
             conn,

@@ -250,29 +250,37 @@ async def apply_setting_to_device(
 ):
     device_query = """
         SELECT 
-            CASE 
-                WHEN EXISTS (SELECT 1 FROM sensors WHERE device_id = $1) THEN 'sensor'
-                WHEN EXISTS (SELECT 1 FROM controllers WHERE device_id = $1) THEN 'controller'
-                ELSE NULL 
-            END as type;
+            d.name,
+            CASE
+                WHEN c.device_id IS NOT NULL THEN 'controller'
+                WHEN s.device_id IS NOT NULL THEN 'sensor'
+            AS type
+        FROM devices d
+        LEFT JOIN controllers c ON d.id = c.device_id
+        LEFT JOIN sensors s ON d.id = s.device_id
+        WHERE d.id = $1;
     """
-    device_type = await conn.fetchval(device_query, device_id)
-    if not device_type:
+    device = await conn.fetchrow(device_query, device_id)
+    if not device:
         raise ValueError(f"Device ID {device_id} not found or is invalid.")
-
+    device_type = device['type']
     # 2. Determine the Setting Type
     setting_query = """
-        SELECT 
-            CASE 
-                WHEN EXISTS (SELECT 1 FROM thresholds WHERE setting_id = $1) THEN 'threshold'
-                WHEN EXISTS (SELECT 1 FROM schedules WHERE setting_id = $1) THEN 'schedule'
-                ELSE NULL 
-            END as type;
+        SELECT
+            set.name,
+            CASE
+                WHEN sch.setting_id IS NOT NULL THEN 'schedule'
+                WHEN thr.setting_id IS NOT NULL THEN 'threshold'
+            END AS type
+        FROM settings set
+        LEFT JOIN schedules sch ON set.id = sch.setting_id
+        LEFT JOIN thresholds thr ON set.id = thr.setting_id
+        WHERE set.id = $1;
     """
-    setting_type = await conn.fetchval(setting_query, setting_id)
-    if not setting_type:
+    setting = await conn.fetchrow(setting_query, setting_id)
+    if not setting:
         raise ValueError(f"Setting ID {setting_id} not found or is invalid.")
-
+    setting_type = setting['type']
     # 3. ENFORCE THE BUSINESS LOGIC
     if device_type == 'sensor' and setting_type != 'threshold':
         raise ValueError("Strict Rule: Sensors can only be applied with thresholds.")
@@ -288,7 +296,7 @@ async def apply_setting_to_device(
     await conn.execute(insert_query, device_id, setting_id)
     
     # Return types so the router can use them for logging
-    return {"device_type": device_type, "setting_type": setting_type}
+    return {"device_type": device_type, "device_name": device['name'], "setting_type": setting_type, "setting_name": setting['name']}
 
 # ==========================================
 # SCHEDULER HELPER
@@ -299,11 +307,14 @@ async def get_due_start_schedules(conn: asyncpg.Connection, current_time: dateti
             a.device_id,
             d.name AS device_name,
             d.feed_id,
-            set.action
+            set.name AS setting_name,
+            set.action,
+            u.home_id
         FROM apply a
         JOIN schedules sch ON a.setting_id = sch.setting_id
         JOIN devices d ON a.device_id = d.id
         JOIN settings set ON sch.setting_id = set.id
+        JOIN users u ON set.admin_id = u.id
         WHERE
             $1 >= sch.date_start
             AND (sch.date_end IS NULL OR $1 <= sch.date_end)
@@ -325,11 +336,14 @@ async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime
             a.device_id,
             d.name AS device_name,
             d.feed_id,
-            set.action
+            set.name AS setting_name,
+            set.action,
+            u.home_id
         FROM apply a
         JOIN schedules sch ON a.setting_id = sch.setting_id
         JOIN devices d ON a.device_id = d.id
         JOIN settings set ON sch.setting_id = set.id
+        JOIN users u ON set.admin_id = u.id
         WHERE
             $1 >= sch.date_start 
             AND (sch.date_end IS NULL OR $1 <= sch.date_end)

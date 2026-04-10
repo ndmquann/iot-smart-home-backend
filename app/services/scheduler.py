@@ -4,6 +4,8 @@ from datetime import datetime
 from app.crud import crud_setting
 from app.db.database import get_db_connection
 from app.services import mqtt as mqtt_service
+from app.utils import Utils
+
 
 async def run_scheduler():
     now = datetime.now()
@@ -18,16 +20,26 @@ async def run_scheduler():
                 for task in start_task:
                     target_status = '1' if task['action'] == 'ON' else '0'
                     feed_id = f"{task['feed_id']}-control"
+                    schedule_name = task['setting_name']
+                    device_name = task['device_name']
+                    home_id = task['home_id']
 
                     mqtt_service.publish_command(feed_id, target_status)
+                    description = f"Schedule '{schedule_name}' triggered action {task['action']} for device '{device_name}'."
+                    await Utils.generate_log(conn, description, "system action", home_id)
                 
                 end_task = await crud_setting.get_due_end_schedules(conn, curr_time)
 
                 for task in end_task:
                     target_status = "0" if task['action'] == "ON" else "1"
                     feed_id = f"{task['feed_id']}-control"
+                    schedule_name = task['setting_name']
+                    device_name = task['device_name']
+                    home_id = task['home_id']
 
                     mqtt_service.publish_command(feed_id, target_status)
+                    description = f"Schedule '{schedule_name}' ended, triggered action {task['action']} for device '{device_name}'."
+                    await Utils.generate_log(conn, description, "system action", home_id)
         except Exception as e:
             print(f"Error in scheduler: {str(e)}")
 
