@@ -1,3 +1,5 @@
+import datetime
+
 import asyncpg
 from app.schemas.setting import ScheduleCreate, ThresholdCreate
 from app.utils import Utils
@@ -13,11 +15,11 @@ async def create_schedule(
     async with conn.transaction():
         # 1. insert into base settings table
         query_base = """
-            INSERT INTO settings (name, admin_id)
-            VALUES ($1, $2)
-            RETURNING id, name, admin_id;
+            INSERT INTO settings (name, admin_id, action)
+            VALUES ($1, $2, $3)
+            RETURNING id, name, admin_id, action;
         """
-        new_setting = await conn.fetchrow(query_base, schedule.name, admin_id)
+        new_setting = await conn.fetchrow(query_base, schedule.name, admin_id, schedule.action)
         setting_id = new_setting['id']
 
         # 2. insert into schedules table
@@ -55,7 +57,8 @@ async def get_all_schedules(conn: asyncpg.Connection, home_id: int) -> list[dict
             sch.date_start, 
             sch.date_end, 
             sch.time_start, 
-            sch.timer
+            sch.timer,
+            set.action
         FROM settings set
         JOIN schedules sch ON set.id = sch.setting_id
         WHERE set.admin_id = $1;
@@ -73,7 +76,8 @@ async def get_schedule_by_id(conn: asyncpg.Connection, setting_id: int) -> dict 
             sch.date_start, 
             sch.date_end, 
             sch.time_start, 
-            sch.timer
+            sch.timer,
+            set.action
         FROM settings set
         JOIN schedules sch ON set.id = sch.setting_id
         WHERE set.id = $1;
@@ -95,11 +99,11 @@ async def update_schedule(
         # 1. update base settings table
         query_base = """
             UPDATE settings
-            SET name = $1
-            WHERE id = $2 AND admin_id = $3
+            SET name = $1, action = $2
+            WHERE id = $3 AND admin_id = $4
             RETURNING id, name, admin_id;
         """
-        await conn.fetchrow(query_base, new_name, setting_id, admin_id)
+        await conn.fetchrow(query_base, new_name, new_schedule.action, setting_id, admin_id)
 
         # 2. update schedules table
         query_schedule = """
@@ -128,11 +132,11 @@ async def create_threshold(
     async with conn.transaction():
         # 1. insert into base settings table
         query_base = """
-            INSERT INTO settings (name, admin_id) 
-            VALUES ($1, $2)
-            RETURNING id, name, admin_id;
+            INSERT INTO settings (name, admin_id, action) 
+            VALUES ($1, $2, $3)
+            RETURNING id, name, admin_id, action;
         """
-        new_setting = await conn.fetchrow(query_base, threshold.name, admin_id)
+        new_setting = await conn.fetchrow(query_base, threshold.name, admin_id, threshold.action)
         setting_id = new_setting['id']
 
         # 2. insert into thresholds table
@@ -182,7 +186,8 @@ async def get_threshold_by_id(conn: asyncpg.Connection, setting_id: int) -> dict
             'threshold' AS type,
             set.name, 
             thr.value, 
-            thr.condition
+            thr.condition,
+            set.action
         FROM settings set
         JOIN thresholds thr ON set.id = thr.setting_id
         WHERE set.id = $1
@@ -204,11 +209,11 @@ async def update_threshold(
         # 1. update base settings table
         query_base = """
             UPDATE settings
-            SET name = $1
-            WHERE id = $2 AND admin_id = $3
+            SET name = $1, action = $2
+            WHERE id = $3 AND admin_id = $4
             RETURNING id, name, admin_id;
         """
-        await conn.fetchrow(query_base, new_name, setting_id, admin_id)
+        await conn.fetchrow(query_base, new_name, new_threshold.action, setting_id, admin_id)
 
         # 2. update thresholds table
         query_threshold = """    
@@ -243,9 +248,104 @@ async def apply_setting_to_device(
     device_id: int, 
     setting_id: int
 ):
-    query = """
-        INSERT INTO apply (device_id, setting_id)
-        VALUES ($1, $2);
-        ON CONFLICT DO NOTHING;
+    device_query = """
+        SELECT 
+            CASE 
+                WHEN EXISTS (SELECT 1 FROM sensors WHERE device_id = $1) THEN 'sensor'
+                WHEN EXISTS (SELECT 1 FROM controllers WHERE device_id = $1) THEN 'controller'
+                ELSE NULL 
+            END as type;
     """
-    await conn.execute(query, device_id, setting_id)
+    device_type = await conn.fetchval(device_query, device_id)
+    if not device_type:
+        raise ValueError(f"Device ID {device_id} not found or is invalid.")
+
+    # 2. Determine the Setting Type
+    setting_query = """
+        SELECT 
+            CASE 
+                WHEN EXISTS (SELECT 1 FROM thresholds WHERE setting_id = $1) THEN 'threshold'
+                WHEN EXISTS (SELECT 1 FROM schedules WHERE setting_id = $1) THEN 'schedule'
+                ELSE NULL 
+            END as type;
+    """
+    setting_type = await conn.fetchval(setting_query, setting_id)
+    if not setting_type:
+        raise ValueError(f"Setting ID {setting_id} not found or is invalid.")
+
+    # 3. ENFORCE THE BUSINESS LOGIC
+    if device_type == 'sensor' and setting_type != 'threshold':
+        raise ValueError("Strict Rule: Sensors can only be applied with thresholds.")
+    if device_type == 'controller' and setting_type != 'schedule':
+        raise ValueError("Strict Rule: Controllers can only be applied with schedules.")
+
+    # 4. Insert into the Apply table
+    insert_query = """
+        INSERT INTO apply (device_id, setting_id)
+        VALUES ($1, $2)
+        ON CONFLICT DO NOTHING; -- Prevents errors if already applied
+    """
+    await conn.execute(insert_query, device_id, setting_id)
+    
+    # Return types so the router can use them for logging
+    return {"device_type": device_type, "setting_type": setting_type}
+
+# ==========================================
+# SCHEDULER HELPER
+# ==========================================
+async def get_due_start_schedules(conn: asyncpg.Connection, current_time: datetime) -> list[dict]:
+    query = """
+        SELECT
+            a.device_id,
+            d.name AS device_name,
+            d.feed_id,
+            set.action
+        FROM apply a
+        JOIN schedules sch ON a.setting_id = sch.setting_id
+        JOIN devices d ON a.device_id = d.id
+        JOIN settings set ON sch.setting_id = set.id
+        WHERE
+            $1 >= sch.date_start
+            AND (sch.date_end IS NULL OR $1 <= sch.date_end)
+            AND $2 = EXTRACT(HOUR FROM sch.time_start)
+            AND $3 = EXTRACT(MINUTE FROM sch.time_start)
+            AND d.status != set.action;
+    """
+    records = await conn.fetch(
+        query, 
+        current_time.date(),
+        current_time.hour,
+        current_time.minute
+        )
+    return [dict(record) for record in records]
+
+async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime) -> list[dict]:
+    query = """
+        SELECT
+            a.device_id,
+            d.name AS device_name,
+            d.feed_id,
+            set.action
+        FROM apply a
+        JOIN schedules sch ON a.setting_id = sch.setting_id
+        JOIN devices d ON a.device_id = d.id
+        JOIN settings set ON sch.setting_id = set.id
+        WHERE
+            $1 >= sch.date_start 
+            AND (sch.date_end IS NULL OR $1 <= sch.date_end)
+            AND sch.timer IS NOT NULL
+            AND sch.timer > 0
+            AND $2 = EXTRACT(HOUR FROM (sch.time_start + (sch.timer * interval '1 minute')))
+            AND $3 = EXTRACT(MINUTE FROM (sch.time_start + (sch.timer * interval '1 minute')))
+            AND d.status != CASE 
+                WHEN set.action = 'ON' THEN 'OFF'
+                ELSE 'ON'
+            END;
+    """
+    records = await conn.fetch(
+        query, 
+        current_time.date(),
+        current_time.hour,
+        current_time.minute
+        )
+    return [dict(record) for record in records]

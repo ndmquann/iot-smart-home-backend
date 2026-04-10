@@ -79,7 +79,8 @@ CREATE TABLE controllers (
 CREATE TABLE settings (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    admin_id INTEGER REFERENCES admins(uid) ON DELETE CASCADE
+    admin_id INTEGER REFERENCES admins(uid) ON DELETE CASCADE,
+    action VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE thresholds (

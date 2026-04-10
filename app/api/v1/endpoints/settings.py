@@ -23,7 +23,7 @@ async def create_new_schedule(
         new_schedule = await crud_setting.create_schedule(conn, schedule, curr_admin['id'])
 
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
-        description = f"{admin} created Schedule '{schedule.name}'."
+        description = f"{admin} created Schedule '{schedule.name}' with action {schedule.action}."
         await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
         
         return new_schedule
@@ -97,7 +97,7 @@ async def create_new_threshold(
         new_threshold = await crud_setting.create_threshold(conn, threshold, curr_admin['id'])
 
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
-        description = f"{admin} created Threshold '{threshold.name}'."
+        description = f"{admin} created Threshold '{threshold.name}' with action {threshold.action}."
         await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
         return new_threshold
@@ -173,3 +173,46 @@ async def remove_setting(
     return {
         "message": f"Successfully deleted '{setting_name}'."
     }
+
+@router.post("/{setting_id}/apply/{device_id}", status_code=status.HTTP_200_OK)
+async def apply_setting(
+    setting_id: int,
+    device_id: int,
+    curr_admin: dict = Depends(get_current_admin),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    Apply a setting to a device. 
+    Strictly enforces: Sensors + Thresholds | Controllers + Schedules
+    """
+    try:
+        # Call the smart CRUD function
+        result = await crud_setting.apply_setting_to_device(conn, setting_id, device_id)
+        
+        # Log the action beautifully
+        admin_name = f"{curr_admin['fname']} {curr_admin['lname']}".title()
+        description = (f"{admin_name} successfully applied {result['setting_type']} "
+                       f"(ID: {setting_id}) to {result['device_type']} (ID: {device_id}).")
+        
+        await Utils.generate_log(
+            conn,
+            type="admin action",
+            description=description,
+            home_id=curr_admin['home_id']
+        )
+
+        return {
+            "message": "Setting applied successfully.",
+            "details": {
+                "device_id": device_id,
+                "setting_id": setting_id,
+                "device_type": result['device_type'],
+                "setting_type": result['setting_type']
+            }
+        }
+
+    except ValueError as ve:
+        # This catches our custom business logic rules and returns a 400!
+        raise BadRequestException(str(ve))
+    except Exception as e:
+        raise DatabaseException(f"Failed to apply setting: {str(e)}")

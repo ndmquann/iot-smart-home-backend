@@ -9,6 +9,7 @@ from app.core.exceptions import SmartHomeException
 
 from app.services.mqtt import fastapi_loop, mqtt_client
 import app.services.mqtt as mqtt_module
+from app.services.scheduler import run_scheduler
 from app.core.config import settings
 
 @asynccontextmanager
@@ -20,9 +21,17 @@ async def lifespan(app: FastAPI):
     
     mqtt_client.connect(settings.AIO_SERVER, settings.AIO_PORT, 60)
     mqtt_client.loop_start()
+    scheduler_task = asyncio.create_task(run_scheduler())
 
     yield
-
+    
+    if scheduler_task:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            print("Scheduler task cancelled")
+            
     mqtt_client.loop_stop()
     mqtt_client.disconnect()
 

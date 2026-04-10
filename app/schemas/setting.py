@@ -4,6 +4,7 @@ from datetime import date, time
 
 class SettingBase(BaseModel):
     name: str
+    action: str
 
 # ==========================================
 # SCHEDULE SCHEMAS (Module 3)
