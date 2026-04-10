@@ -15,10 +15,5 @@ class LogResponse(LogBase):
     id: int
     timestamp: datetime
 
-    # optional fields populated dynamically based on the mapping tables
-    user_name: Optional[str] = None
-    device_name: Optional[str] = None
-    setting_name: Optional[str] = None
-
     class Config:
         from_attributes = True
