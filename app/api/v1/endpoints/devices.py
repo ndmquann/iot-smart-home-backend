@@ -19,7 +19,23 @@ async def register_new_device(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    register a new device and categorize it as a sensor or controller
+    Register a new device as a sensor or controller.
+    
+    Creates a new device and categorizes it as either a sensor (for reading data)
+    or a controller (for performing actions). Only admins can create devices.
+    This action generates an admin log entry.
+    
+    Args:
+        device: DeviceCreate schema with name, zone_id, feed_id, status, type
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        DeviceResponse: New device object with id, name, zone_id, feed_id, status, and type
+        
+    Raises:
+        BadRequestException: If device type is not 'sensor' or 'controller'
+        DatabaseException: If device creation fails
     """
     if device.type not in ["sensor", "controller"]:
         raise BadRequestException("Device type must be either 'sensor' or 'controller'.")
@@ -41,7 +57,21 @@ async def read_all_devices(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    get all devices to display on dashboard
+    Retrieve all devices in the user's home.
+    
+    Fetches all devices (sensors and controllers) for the user's home, including
+    current status and sensor values. Results are ordered by zone and device name.
+    Both admins and members can view devices.
+    
+    Args:
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        list: List of DeviceResponse objects with details for display on dashboard
+        
+    Raises:
+        NotFoundException: If home has no devices
     """
     devices = await crud_device.get_all_devices(conn, curr_user['home_id'])
     if not devices:
@@ -249,7 +279,20 @@ async def read_device_state(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    get device state for display
+    Retrieve the current state of a device.
+    
+    Fetches comprehensive device details including type-specific information (sensor value,
+    controller mode/speed), zone, feed ID, and current status.
+    
+    Args:
+        device_id: ID of the device to retrieve state for
+        conn: Async database connection
+        
+    Returns:
+        dict: Device state object with all current details
+        
+    Raises:
+        NotFoundException: If device not found
     """
     device = await crud_device.read_device_detail(conn, device_id)
     if not device:

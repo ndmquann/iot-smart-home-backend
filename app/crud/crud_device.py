@@ -8,6 +8,20 @@ from app.utils import Utils
 # ==========================================
 
 async def create_device(conn: asyncpg.Connection, device: DeviceCreate, admin_id: int) -> dict:
+    """
+    Create a new device (sensor or controller) in the database.
+    
+    Inserts device record into devices table and corresponding record into either
+    sensors or controllers table based on device type.
+    
+    Args:
+        conn: Async database connection
+        device: DeviceCreate schema with name, zone_id, status, feed_id, type
+        admin_id: ID of the admin creating the device
+        
+    Returns:
+        dict: New device object with all details including id, name, zone_id, feed_id, status, type
+    """
     async with conn.transaction():
         query = """
             INSERT INTO devices (admin_id, zone_id, name, status, feed_id)
@@ -125,6 +139,17 @@ async def get_device_by_id(conn: asyncpg.Connection, device_id: int) -> dict | N
     return dict(record) if record else None
 
 async def update_controller_mode(conn: asyncpg.Connection, device_id: int, mode: str):
+    """
+    Update the operational mode of a controller device.
+    
+    Changes controller mode to 'manual' or 'auto'. Mode determines whether the
+    device is controlled manually or by automated rules.
+    
+    Args:
+        conn: Async database connection
+        device_id: ID of the controller device
+        mode: 'manual' or 'auto'
+    """
     query = """
         UPDATE controllers
         SET mode = $1
@@ -133,6 +158,16 @@ async def update_controller_mode(conn: asyncpg.Connection, device_id: int, mode:
     await conn.execute(query, mode, device_id)
 
 async def update_controller_speed(conn: asyncpg.Connection, device_id: int, speed: int):
+    """
+    Update the speed/power level of a controller device.
+    
+    Sets the speed level (0-100) for devices that support variable speed control.
+    
+    Args:
+        conn: Async database connection
+        device_id: ID of the controller device
+        speed: Speed value between 0 and 100
+    """
     query = """
         UPDATE controllers
         SET speed = $1
@@ -141,6 +176,18 @@ async def update_controller_speed(conn: asyncpg.Connection, device_id: int, spee
     await conn.execute(query, speed, device_id)
 
 async def delete_device(conn: asyncpg.Connection, device_id: int) -> str | None:
+    """
+    Delete a device from the database.
+    
+    Permanently removes a device record and associated sensor/controller record.
+    
+    Args:
+        conn: Async database connection
+        device_id: ID of the device to delete
+        
+    Returns:
+        str: Name of the deleted device if successful, None if device not found
+    """
     query = """
         SELECT name
         FROM devices
@@ -152,6 +199,19 @@ async def delete_device(conn: asyncpg.Connection, device_id: int) -> str | None:
     return device_name
 
 async def read_device_detail(conn: asyncpg.Connection, device_id: int) -> dict | None:
+    """
+    Retrieve detailed information about a device.
+    
+    Fetches comprehensive device data including type-specific fields (sensor value,
+    controller mode/speed), zone assignment, feed ID, and current status.
+    
+    Args:
+        conn: Async database connection
+        device_id: ID of the device
+        
+    Returns:
+        dict: Device detail object with all fields if found, None otherwise
+    """
     query = """
         SELECT 
             d.id,

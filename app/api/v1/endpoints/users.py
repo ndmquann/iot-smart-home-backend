@@ -15,7 +15,21 @@ async def register_user(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    Register a new Admin or Member.
+    Register a new user as Admin or Member.
+    
+    Creates a new user account with the specified role (admin or member). Automatically
+    creates a new home if this is an admin user. Validates that email is not already registered.
+    
+    Args:
+        user: UserCreate schema with fname, lname, email, password, type, home_name
+        conn: Async database connection
+        
+    Returns:
+        UserResponse: New user object with id, email, name, status, home_id, and type
+        
+    Raises:
+        BadRequestException: If type is invalid, email already registered, or other validation fails
+        DatabaseException: If database operations fail
     """
     # 1. validate type 
     if user.type.lower() not in ["admin", "member"]:
@@ -49,7 +63,19 @@ async def get_user(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    Get user by email.
+    Retrieve user information by email address.
+    
+    Fetches complete user details including role type, home assignment, and account status.
+    
+    Args:
+        email: Email address of the user to retrieve
+        conn: Async database connection
+        
+    Returns:
+        UserResponse: User object with id, fname, lname, email, status, home_id, and type
+        
+    Raises:
+        NotFoundException: If user with email not found
     """
     user = await crud_user.get_user_by_email(conn, email)
     if not user:

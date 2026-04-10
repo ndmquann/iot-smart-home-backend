@@ -17,7 +17,22 @@ async def create_new_schedule(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    create a new schedule
+    Create a new schedule for automated device actions.
+    
+    Creates a schedule that defines when a device should perform an action (on/off).
+    Schedules include date range, start time, and optional duration (timer).
+    Only admins can create schedules. This action generates an admin log entry.
+    
+    Args:
+        schedule: ScheduleCreate schema with name, action, date_start, date_end, time_start, timer
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        ScheduleResponse: New schedule object with all timing and action details
+        
+    Raises:
+        DatabaseException: If schedule creation fails
     """
     try:
         new_schedule = await crud_setting.create_schedule(conn, schedule, curr_admin['id'])
@@ -36,7 +51,20 @@ async def read_all_schedules(
     curr_user: dict = Depends(get_current_user)
 ):
     """
-    fetch all schedules availabe to the user (admin and member can view schedules)
+    Retrieve all schedules available to the user.
+    
+    Fetches all schedules for the user's home. Both admins and members can view schedules.
+    Results include all schedule details: dates, times, duration, and associated actions.
+    
+    Args:
+        conn: Async database connection
+        curr_user: Current authenticated user
+        
+    Returns:
+        list: List of ScheduleResponse objects with complete schedule information
+        
+    Raises:
+        NotFoundException: If home has no schedules
     """
     schedules = await crud_setting.get_all_schedules(conn, curr_user['home_id'])
     if not schedules:
@@ -51,7 +79,20 @@ async def read_schedule(
     curr_user: dict = Depends(get_current_user)
 ):
     """
-    fetch a specific schedule by its setting ID
+    Retrieve a specific schedule by its ID.
+    
+    Fetches complete details of a single schedule including dates, times, duration, and action.
+    
+    Args:
+        setting_id: ID of the schedule to retrieve
+        conn: Async database connection
+        curr_user: Current authenticated user
+        
+    Returns:
+        dict: Schedule object with all details
+        
+    Raises:
+        NotFoundException: If schedule not found
     """
     schedule = await crud_setting.get_schedule_by_id(conn, setting_id)
     if not schedule:
@@ -67,7 +108,22 @@ async def update_schedule(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    update an existing schedule
+    Update an existing schedule.
+    
+    Modifies schedule details including name, action, date range, start time, and duration.
+    Only admins can update schedules. This action generates an admin log entry.
+    
+    Args:
+        setting_id: ID of the schedule to update
+        schedule: ScheduleCreate schema with updated values
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message
+        
+    Raises:
+        NotFoundException: If schedule not found
     """
     setting = await crud_setting.get_schedule_by_id(conn, setting_id)
     if not setting:
@@ -91,7 +147,21 @@ async def create_new_threshold(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    create a new threshold
+    Create a new threshold for automated sensor-based actions.
+    
+    Creates a threshold that triggers an action when a sensor value reaches or crosses
+    a specified limit. Only admins can create thresholds. This action generates an admin log entry.
+    
+    Args:
+        threshold: ThresholdCreate schema with name, value, condition, target_device_id, action
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        ThresholdResponse: New threshold object with condition, value, and target device
+        
+    Raises:
+        DatabaseException: If threshold creation fails
     """
     try:
         new_threshold = await crud_setting.create_threshold(conn, threshold, curr_admin['id'])
@@ -110,7 +180,21 @@ async def read_all_thresholds(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    fetch all thresholds
+    Retrieve all thresholds available to the user.
+    
+    Fetches all thresholds for the user's home. Thresholds define automated actions
+    when sensor values reach/cross limits. Both admins and members can view thresholds.
+    Results include condition, value, target device, and associated action.
+    
+    Args:
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        list: List of ThresholdResponse objects with complete threshold information
+        
+    Raises:
+        NotFoundException: If home has no thresholds
     """
     thresholds = await crud_setting.get_all_thresholds(conn, curr_user['home_id'])
     if not thresholds:
@@ -124,7 +208,19 @@ async def read_threshold(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    fetch a specific threshold by its setting ID
+    Retrieve a specific threshold by its ID.
+    
+    Fetches complete details of a single threshold including condition, value, and target device.
+    
+    Args:
+        setting_id: ID of the threshold to retrieve
+        conn: Async database connection
+        
+    Returns:
+        dict: Threshold object with all details
+        
+    Raises:
+        NotFoundException: If threshold not found
     """
     threshold = await crud_setting.get_threshold_by_id(conn, setting_id)
     if not threshold:
@@ -140,7 +236,22 @@ async def update_threshold(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    update an existing threshold
+    Update an existing threshold.
+    
+    Modifies threshold details including name, condition, value, target device, and action.
+    Only admins can update thresholds. This action generates an admin log entry.
+    
+    Args:
+        setting_id: ID of the threshold to update
+        threshold: ThresholdCreate schema with updated values
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message
+        
+    Raises:
+        NotFoundException: If threshold not found
     """
     setting = await crud_setting.get_threshold_by_id(conn, setting_id)
     if not setting:

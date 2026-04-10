@@ -58,7 +58,17 @@ async def create_schedule(
     
 async def get_all_schedules(conn: asyncpg.Connection, home_id: int) -> list[dict]:
     """
-    list of existing schedules of a home (admin and member can view schedules)
+    Retrieve all schedules for a home.
+    
+    Fetches all schedules that belong to a home. Both admins and members can view schedules.
+    Results include complete schedule details: dates, times, timers, and associated actions.
+    
+    Args:
+        conn: Async database connection
+        home_id: ID of the home to retrieve schedules for
+        
+    Returns:
+        list: List of schedule objects with setting and timing information
     """
     admin_id = await Utils.get_admin_of_home(conn, home_id)
 
@@ -209,7 +219,18 @@ async def create_threshold(
     
 async def get_all_thresholds(conn: asyncpg.Connection, home_id: int) -> list[dict]:
     """
-    list of existing thresholds
+    Retrieve all thresholds for a home.
+    
+    Fetches all thresholds that belong to a home. Thresholds define automated actions
+    when sensor values reach/cross specified limits. Results include condition, value,
+    target device, and associated action.
+    
+    Args:
+        conn: Async database connection
+        home_id: ID of the home to retrieve thresholds for
+        
+    Returns:
+        list: List of threshold objects with condition, value, and target device information
     """
     admin_id = await Utils.get_admin_of_home(conn, home_id)
     

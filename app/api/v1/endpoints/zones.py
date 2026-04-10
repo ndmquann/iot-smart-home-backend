@@ -17,7 +17,21 @@ async def create_new_zone(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    create a new zone
+    Create a new zone (room) in the home.
+    
+    Creates a new zone (room) on a specified floor. Only admins can create zones.
+    This action generates an admin log entry.
+    
+    Args:
+        zone: ZoneCreate schema with room name and floor number
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        ZoneResponse: New zone object with id, admin_id, floor, and room name
+        
+    Raises:
+        DatabaseException: If zone creation fails
     """
     try:
         new_zone = await crud_zone.create_zone(conn, zone, curr_admin['id'])
@@ -36,7 +50,19 @@ async def read_all_zones(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    get all zones to display on dashboard
+    Retrieve all zones (rooms) in the user's home.
+    
+    Fetches all zones organized by floor and room name. Both admins and members can view zones.
+    
+    Args:
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        list: List of ZoneResponse objects with id, floor, room name, and admin_id
+        
+    Raises:
+        NotFoundException: If home has no zones
     """
     zones = await crud_zone.get_all_zones(conn, curr_user['home_id'])
     if not zones:
@@ -50,7 +76,20 @@ async def read_zones_by_floor(
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
-    get all rooms in a floor
+    Retrieve all rooms on a specific floor.
+    
+    Fetches all zones for a given floor in the user's home, ordered by room name.
+    
+    Args:
+        floor: Floor number to retrieve rooms from
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        list: List of ZoneResponse objects for the specified floor
+        
+    Raises:
+        NotFoundException: If floor not found or has no rooms
     """
     zones = await crud_zone.get_zone_by_floor(conn, floor, curr_user['home_id'])
     if not zones:
