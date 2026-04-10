@@ -2,6 +2,21 @@ import asyncpg
 from app.schemas.user import UserCreate
 
 async def create_user(conn: asyncpg.Connection, user: UserCreate, hashed_password: str, home_id: int) -> dict:
+    """
+    Create a new user in the database and assign user type (admin or member).
+    
+    Inserts a new user record into the users table with hashed password,
+    then inserts corresponding record into admins or members table based on user type.
+    
+    Args:
+        conn: Async database connection
+        user: UserCreate schema with fname, lname, email, password, type, home_name
+        hashed_password: Pre-hashed password string
+        home_id: ID of the home this user belongs to
+        
+    Returns:
+        dict: New user object with id, fname, lname, email, status, home_id, and type
+    """
     async with conn.transaction():
         query_base_user = """
             INSERT INTO users (fname, lname, email, password, home_id)
@@ -54,6 +69,18 @@ async def get_user_by_email(conn: asyncpg.Connection, email: str) -> dict | None
     return dict(record) if record else None
 
 async def is_admin(conn: asyncpg.Connection, user_id: int) -> bool:
+    """
+    Check if a user has admin privileges.
+    
+    Queries the admins table to verify if the user ID exists as an admin.
+    
+    Args:
+        conn: Async database connection
+        user_id: ID of the user to check
+        
+    Returns:
+        bool: True if user is an admin, False otherwise
+    """
     query = "SELECT 1 FROM admins WHERE uid = $1;"
     record = await conn.fetchrow(query, user_id)
     return bool(record)

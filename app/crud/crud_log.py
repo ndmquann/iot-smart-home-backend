@@ -2,6 +2,19 @@ import asyncpg
 from app.schemas.log import LogBase
 
 async def create_log(conn: asyncpg.Connection, log: LogBase) -> dict:
+    """
+    Create a new activity log entry in the database.
+    
+    Inserts a log record with type, description, and auto-generated timestamp.
+    Logs track user actions, admin actions, and system events.
+    
+    Args:
+        conn: Async database connection
+        log: LogBase schema with type and description
+        
+    Returns:
+        dict: New log object with id, type, description, and timestamp
+    """
     async with conn.transaction():
         query = """
             INSERT INTO logs (type, description, home_id)

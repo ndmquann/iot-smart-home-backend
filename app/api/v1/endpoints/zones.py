@@ -63,6 +63,24 @@ async def remove_zone(
     curr_admin: dict = Depends(get_current_admin),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Delete a zone (room) from the system.
+    
+    Permanently removes a zone record. Can only delete zones with no devices attached.
+    Only admins can delete zones. This action generates an admin log entry.
+    
+    Args:
+        zone_id: ID of the zone to delete
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message with zone details (room and floor)
+        
+    Raises:
+        NotFoundException: If zone not found
+        BadRequestException: If zone still has devices attached
+    """
     try:
         zone_info = await crud_zone.delete_zone(conn, zone_id)
     except Exception as e:
@@ -89,6 +107,25 @@ async def remove_floor(
     curr_admin: dict = Depends(get_current_admin),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Delete all rooms on a specific floor.
+    
+    Permanently removes all zones on a given floor. Can only delete if no devices
+    are attached to any rooms on that floor. Only admins can delete floors.
+    This action generates an admin log entry with list of deleted rooms.
+    
+    Args:
+        floor: Floor number to delete
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message and list of deleted room names
+        
+    Raises:
+        NotFoundException: If floor or rooms not found
+        BadRequestException: If rooms on floor still have devices attached
+    """
     try:
         deleted_rooms = await crud_zone.delete_floor(conn, floor)
     except Exception as e:

@@ -162,6 +162,23 @@ async def remove_setting(
     curr_admin: dict = Depends(get_current_admin),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Delete a schedule or threshold setting.
+    
+    Permanently removes a setting (schedule or threshold) from the database.
+    Only admins can delete settings. This action generates an admin log entry.
+    
+    Args:
+        setting_id: ID of the setting to delete
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message with setting name
+        
+    Raises:
+        NotFoundException: If setting not found
+    """
     setting_name = await crud_setting.delete_setting(conn, setting_id)
     if not setting_name:
         raise NotFoundException(f"Setting ID {setting_id} not found.")
@@ -181,6 +198,27 @@ async def apply_setting(
     curr_admin: dict = Depends(get_current_admin),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Apply a schedule or threshold setting to a device.
+    
+    Associates a setting with a device with validation:
+    - Thresholds can only be applied to sensors
+    - Schedules can only be applied to controllers
+    Only admins can apply settings. This action generates an admin log entry.
+    
+    Args:
+        setting_id: ID of the schedule or threshold to apply
+        device_id: ID of the device to apply setting to
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message with setting and device details
+        
+    Raises:
+        BadRequestException: If setting-device type mismatch
+        NotFoundException: If setting or device not found
+    """
     try:
         result = await crud_setting.apply_setting_to_device(conn, device_id, setting_id)
         

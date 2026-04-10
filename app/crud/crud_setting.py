@@ -12,6 +12,20 @@ async def create_schedule(
     schedule: ScheduleCreate,
     admin_id: int
 ) -> dict:
+    """
+    Create a new schedule setting in the database.
+    
+    Inserts schedule into base settings table and schedules table. Schedules define
+    automated device actions at specific times with optional duration (timer).
+    
+    Args:
+        conn: Async database connection
+        schedule: ScheduleCreate schema with name, action, date range, time, timer
+        admin_id: ID of the admin creating the schedule
+        
+    Returns:
+        dict: New schedule object with setting details and type='schedule'
+    """
     async with conn.transaction():
         # 1. insert into base settings table
         query_base = """
@@ -67,6 +81,18 @@ async def get_all_schedules(conn: asyncpg.Connection, home_id: int) -> list[dict
     return [dict(record) for record in records]
 
 async def get_schedule_by_id(conn: asyncpg.Connection, setting_id: int) -> dict | None:
+    """
+    Retrieve a specific schedule by its setting ID.
+    
+    Fetches schedule details including dates, times, duration, and action.
+    
+    Args:
+        conn: Async database connection
+        setting_id: ID of the schedule setting to retrieve
+        
+    Returns:
+        dict: Schedule object if found, None otherwise
+    """
     query = """
         SELECT 
             set.id AS setting_id, 
@@ -93,7 +119,16 @@ async def update_schedule(
     admin_id: int
 ):
     """
-    update existing schedule
+    Update an existing schedule setting.
+    
+    Modifies schedule details including name, date range, time, timer, and action.
+    
+    Args:
+        conn: Async database connection
+        setting_id: ID of the schedule to update
+        new_name: New schedule name
+        new_schedule: ScheduleCreate schema with updated values
+        admin_id: Admin ID for authorization
     """
     async with conn.transaction():
         # 1. update base settings table
@@ -129,6 +164,20 @@ async def create_threshold(
     threshold: ThresholdCreate,
     admin_id: int
 ) -> dict:
+    """
+    Create a new threshold setting in the database.
+    
+    Inserts threshold into base settings table and thresholds table. Thresholds
+    define automated actions when sensor values reach/cross specified limits.
+    
+    Args:
+        conn: Async database connection
+        threshold: ThresholdCreate schema with name, value, condition, target_device_id, action
+        admin_id: ID of the admin creating the threshold
+        
+    Returns:
+        dict: New threshold object with setting details and type='threshold'
+    """
     async with conn.transaction():
         # 1. insert into base settings table
         query_base = """
@@ -182,6 +231,18 @@ async def get_all_thresholds(conn: asyncpg.Connection, home_id: int) -> list[dic
     return [dict(record) for record in records]
 
 async def get_threshold_by_id(conn: asyncpg.Connection, setting_id: int) -> dict | None:
+    """
+    Retrieve a specific threshold by its setting ID.
+    
+    Fetches threshold details including condition, value, and target device.
+    
+    Args:
+        conn: Async database connection
+        setting_id: ID of the threshold setting to retrieve
+        
+    Returns:
+        dict: Threshold object if found, None otherwise
+    """
     query = """
         SELECT 
             set.id AS setting_id, 
@@ -207,7 +268,16 @@ async def update_threshold(
     admin_id: int
 ):
     """
-    update existing threshold
+    Update an existing threshold setting.
+    
+    Modifies threshold details including name, condition, value, target device, and action.
+    
+    Args:
+        conn: Async database connection
+        setting_id: ID of the threshold to update
+        new_name: New threshold name
+        new_threshold: ThresholdCreate schema with updated values
+        admin_id: Admin ID for authorization
     """
     async with conn.transaction():
         # 1. update base settings table
@@ -235,6 +305,18 @@ async def update_threshold(
         )
     
 async def delete_setting(conn: asyncpg.Connection, setting_id: int) -> str | None:
+    """
+    Delete a schedule or threshold setting from the database.
+    
+    Permanently removes a setting record. Associated device applications are also deleted.
+    
+    Args:
+        conn: Async database connection
+        setting_id: ID of the setting to delete
+        
+    Returns:
+        str: Name of the deleted setting if found, None otherwise
+    """
     query = """
         SELECT name
         FROM settings
@@ -253,6 +335,24 @@ async def apply_setting_to_device(
     device_id: int, 
     setting_id: int
 ):
+    """
+    Link a schedule or threshold setting to a device with business rule validation.
+    
+    Associates a setting with a device, enforcing these rules:
+    - Thresholds can ONLY be applied to sensors
+    - Schedules can ONLY be applied to controllers
+    
+    Args:
+        conn: Async database connection
+        device_id: ID of the device to apply setting to
+        setting_id: ID of the schedule or threshold to apply
+        
+    Returns:
+        dict: Device type, device name, setting type, setting name for logging
+        
+    Raises:
+        ValueError: If device type doesn't match setting type or if not found
+    """
     device_query = """
         SELECT 
             d.name,
@@ -307,6 +407,19 @@ async def apply_setting_to_device(
 # SCHEDULER HELPER
 # ==========================================
 async def get_due_start_schedules(conn: asyncpg.Connection, current_time: datetime) -> list[dict]:
+    """
+    Fetch schedules that should start executing at the current time.
+    
+    Retrieves schedules whose start time matches the current time and are within
+    their date range. Used by scheduler service to trigger device actions.
+    
+    Args:
+        conn: Async database connection
+        current_time: Current datetime to match against schedule time_start
+        
+    Returns:
+        list: List of applicable schedules with device and action details
+    """
     query = """
         SELECT
             a.device_id,
@@ -336,6 +449,19 @@ async def get_due_start_schedules(conn: asyncpg.Connection, current_time: dateti
     return [dict(record) for record in records]
 
 async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime) -> list[dict]:
+    """
+    Fetch schedules that should stop executing at the current time.
+    
+    Retrieves schedules that have a timer (duration) and whose end time
+    (start time + timer) matches the current time. Used by scheduler to turn off devices.
+    
+    Args:
+        conn: Async database connection
+        current_time: Current datetime to calculate schedule end times
+        
+    Returns:
+        list: List of applicable schedules with device details for turning off
+    """
     query = """
         SELECT
             a.device_id,
@@ -370,6 +496,19 @@ async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime
     return [dict(record) for record in records]
 
 async def get_triggered_thresholds(conn: asyncpg.Connection) -> list[dict]:
+    """
+    Fetch thresholds whose conditions have been met by current sensor values.
+    
+    Retrieves thresholds where sensor readings satisfy the threshold condition
+    (value >= limit for 'true' or value <= limit for 'false'). Used by threshold
+    engine to trigger automated device actions.
+    
+    Args:
+        conn: Async database connection
+        
+    Returns:
+        list: List of triggered thresholds with sensor, target device, and action details
+    """
     query = """
         SELECT
             t_ctrl.id AS target_device_id,

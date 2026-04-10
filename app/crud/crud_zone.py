@@ -3,6 +3,19 @@ from app.schemas.zone import ZoneCreate
 from app.utils import Utils
 
 async def create_zone(conn: asyncpg.Connection, zone: ZoneCreate, admin_id: int) -> dict:
+    """
+    Create a new zone (room) in the database.
+    
+    Inserts a new zone record associated with the admin and returns zone details.
+    
+    Args:
+        conn: Async database connection
+        zone: ZoneCreate schema with floor and room name
+        admin_id: ID of the admin creating the zone
+        
+    Returns:
+        dict: New zone object with id, admin_id, floor, and room
+    """
     async with conn.transaction():
         query = """
             INSERT INTO zones (admin_id, floor, room)
@@ -28,7 +41,18 @@ async def get_all_zones(conn: asyncpg.Connection, home_id: int) -> list[dict]:
 
 async def get_zone_by_floor(conn: asyncpg.Connection, floor: int, home_id: int) -> list[dict] | None:
     """
-    list of ordered rooms in a floor
+    Retrieve all rooms on a specific floor for a home.
+    
+    Fetches all zones (rooms) on a given floor, ordered by room name.
+    Requires home_id to ensure admin context validation.
+    
+    Args:
+        conn: Async database connection
+        floor: Floor number
+        home_id: ID of the home for context
+        
+    Returns:
+        list: List of zone objects ordered by room name, None if no zones found
     """
     admin_id = await Utils.get_admin_of_home(conn, home_id)
 
@@ -43,7 +67,20 @@ async def get_zone_by_floor(conn: asyncpg.Connection, floor: int, home_id: int) 
 
 async def delete_zone(conn: asyncpg.Connection, zone_id: int) -> str | None:
     """
-    only delete if there are no devices in the zone
+    Delete a zone (room) from the database.
+    
+    Permanently removes a zone record. Validation ensures no devices are attached
+    to the zone before deletion.
+    
+    Args:
+        conn: Async database connection
+        zone_id: ID of the zone to delete
+        
+    Returns:
+        dict: Zone info with floor and room if successful, None if not found
+        
+    Raises:
+        ValueError: If zone still has devices attached
     """
     device_check = "SELECT COUNT(*) FROM devices WHERE zone_id = $1;"
     device_count = await conn.fetchval(device_check, zone_id)
@@ -65,7 +102,21 @@ async def delete_zone(conn: asyncpg.Connection, zone_id: int) -> str | None:
 
 async def delete_floor(conn: asyncpg.Connection, floor: int, home_id: int) -> list[str]:
     """
-    only delete if there is no rooms on this floor have devices
+    Delete all rooms on a specific floor.
+    
+    Permanently removes all zones on a given floor for a home. Validation ensures
+    no devices are attached to any rooms on the floor before deletion.
+    
+    Args:
+        conn: Async database connection
+        floor: Floor number to delete
+        home_id: ID of the home for context
+        
+    Returns:
+        list: List of room names that were deleted
+        
+    Raises:
+        ValueError: If any rooms on floor still have devices attached
     """
     admin_id = await Utils.get_admin_of_home(conn, home_id)
 

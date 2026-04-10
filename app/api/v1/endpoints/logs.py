@@ -15,6 +15,23 @@ async def get_activity_history(
     curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Retrieve activity history logs for the user's home.
+    
+    Fetches the most recent activity logs (user actions, admin actions, etc.)
+    for the home. Both admin and member users can view logs.
+    
+    Args:
+        limit: Maximum number of log records to return (default: 50)
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        list: List of LogResponse objects containing log details and timestamps
+        
+    Raises:
+        LogException: If failed to retrieve activity history
+    """
     try:
         home_id = curr_user['home_id']
         logs = await crud_log.get_recent_logs(conn, home_id, limit)

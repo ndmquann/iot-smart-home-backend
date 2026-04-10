@@ -55,6 +55,26 @@ async def toggle_device(
     curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Toggle a device on or off by sending MQTT command.
+    
+    Sends an on/off command to a device via MQTT. Admins can control both sensors
+    and controllers, while members can only control controllers.
+    
+    Args:
+        device_id: ID of the device to toggle
+        action: 'on' or 'off' command
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message and the MQTT feed ID
+        
+    Raises:
+        BadRequestException: If action is not 'on' or 'off'
+        NotFoundException: If device not found
+        UnauthorizedException: If non-admin tries to control a sensor
+    """
     # verify action
     if action.lower() not in ["on", "off"]:
         raise BadRequestException("Action must be either 'on' or 'off'.")
@@ -97,6 +117,25 @@ async def set_device_mode(
     curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Set controller device mode to automatic or manual.
+    
+    Changes the operational mode of a controller device. Only controllers support
+    mode switching; sensors do not have mode settings.
+    
+    Args:
+        device_id: ID of the controller device
+        mode: 'manual' or 'auto' mode
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message with the new mode
+        
+    Raises:
+        BadRequestException: If mode is invalid or device is not a controller
+        NotFoundException: If device not found
+    """
     if mode.lower() not in ["manual", "auto"]:
         raise BadRequestException("Mode must be either 'manual' or 'auto'.")
     
@@ -125,6 +164,25 @@ async def set_device_speed(
     curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Set controller device speed level (0-100).
+    
+    Adjusts the speed or power level of a controller device via MQTT command.
+    Only controllers support speed adjustment; sensors do not have speed settings.
+    
+    Args:
+        device_id: ID of the controller device
+        speed: Speed value between 0 and 100
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message, speed value, and MQTT feed ID
+        
+    Raises:
+        BadRequestException: If speed is outside 0-100 range or device is not a controller
+        NotFoundException: If device not found
+    """
     if speed < 0 or speed > 100:
         raise BadRequestException("Speed must be between 0 and 100.")
     
@@ -156,6 +214,23 @@ async def remove_device(
     curr_admin: dict = Depends(get_current_admin),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Delete a device from the system.
+    
+    Permanently removes a device record from the database. Only admins can delete devices.
+    This action also generates an admin log entry.
+    
+    Args:
+        device_id: ID of the device to delete
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message with device name
+        
+    Raises:
+        NotFoundException: If device not found
+    """
     device_name = await crud_device.delete_device(conn, device_id)
     if not device_name:
         raise NotFoundException(f"Device ID {device_id} not found.")
@@ -187,6 +262,24 @@ async def read_device_history(
     limit: int = Query(50, description="Number of records to return."),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
+    """
+    Retrieve historical data for a sensor device.
+    
+    Fetches time-series sensor readings with timestamps. Only works for sensor devices;
+    controller devices do not have history data.
+    
+    Args:
+        device_id: ID of the sensor device
+        limit: Maximum number of historical records to return (default: 50)
+        conn: Async database connection
+        
+    Returns:
+        list: List of SensorHistoryResponse objects with value and timestamp
+        
+    Raises:
+        NotFoundException: If device not found
+        BadRequestException: If device is not a sensor
+    """
     device = await crud_device.read_device_detail(conn, device_id)
     if not device:
         raise NotFoundException(f"Device ID {device_id} not found.")

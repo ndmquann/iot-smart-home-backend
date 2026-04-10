@@ -14,7 +14,22 @@ async def login_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
-    """token login"""
+    """
+    Authenticate user and generate access token.
+    
+    Takes email and password via OAuth2 form, verifies credentials,
+    and returns a JWT access token if authentication succeeds.
+    
+    Args:
+        form_data: OAuth2 password request form containing email and password
+        conn: Async database connection
+        
+    Returns:
+        dict: Contains access_token (JWT) and token_type (bearer)
+        
+    Raises:
+        UnauthorizedException: When email doesn't exist or password is incorrect
+    """
     # 1. find user by email
     # form_data.username is standard OAuth2 for email
     user = await crud_user.get_user_by_email(conn, form_data.username)

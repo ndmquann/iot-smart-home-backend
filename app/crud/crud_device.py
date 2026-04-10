@@ -106,10 +106,20 @@ async def get_device_by_feed_id(conn: asyncpg.Connection, feed_id: str) -> dict 
     return dict(record) if record else None
 
 async def get_device_by_id(conn: asyncpg.Connection, device_id: int) -> dict | None:
+    """
+    Retrieve a device by its ID.
+    
+    Fetches complete device information from the devices table.
+    
+    Args:
+        conn: Async database connection
+        device_id: ID of the device to retrieve
+        
+    Returns:
+        dict: Device object if found, None otherwise
+    """
     query = """
-        SELECT *
-        FROM devices
-        WHERE id = $1
+        SELECT * FROM devices WHERE id = $1;
     """
     record = await conn.fetchrow(query, device_id)
     return dict(record) if record else None
