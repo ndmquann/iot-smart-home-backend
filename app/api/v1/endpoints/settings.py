@@ -3,7 +3,7 @@ import asyncpg
 
 from app.db.database import get_db_connection
 from app.schemas.setting import ScheduleCreate, ScheduleResponse, ThresholdCreate, ThresholdResponse
-from app.crud import crud_setting
+from app.crud import crud_setting, crud_device
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException
 from app.utils import Utils
@@ -95,9 +95,9 @@ async def create_new_threshold(
     """
     try:
         new_threshold = await crud_setting.create_threshold(conn, threshold, curr_admin['id'])
-
+        device = await crud_device.get_device_by_id(conn, threshold.target_device_id)
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
-        description = f"{admin} created Threshold '{threshold.name}' with action {threshold.action}."
+        description = f"{admin} created Threshold '{threshold.name}' with action {threshold.action} on device '{device['name']}'."
         await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
         return new_threshold
@@ -181,15 +181,9 @@ async def apply_setting(
     curr_admin: dict = Depends(get_current_admin),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
-    """
-    Apply a setting to a device. 
-    Strictly enforces: Sensors + Thresholds | Controllers + Schedules
-    """
     try:
-        # Call the smart CRUD function
-        result = await crud_setting.apply_setting_to_device(conn, setting_id, device_id)
+        result = await crud_setting.apply_setting_to_device(conn, device_id, setting_id)
         
-        # Log the action beautifully
         admin_name = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = (f"{admin_name} successfully applied {result['setting_type']} "
                        f"'{result['setting_name']}' to {result['device_type']} {result['device_name']}.")
@@ -212,7 +206,6 @@ async def apply_setting(
         }
 
     except ValueError as ve:
-        # This catches our custom business logic rules and returns a 400!
         raise BadRequestException(str(ve))
     except Exception as e:
         raise DatabaseException(f"Failed to apply setting: {str(e)}")

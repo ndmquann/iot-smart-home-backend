@@ -86,7 +86,8 @@ CREATE TABLE settings (
 CREATE TABLE thresholds (
     setting_id INTEGER PRIMARY KEY REFERENCES settings(id) ON DELETE CASCADE,
     value FLOAT NOT NULL,
-    condition BOOLEAN NOT NULL
+    condition BOOLEAN NOT NULL,
+    target_device_id INTEGER REFERENCES devices(id) ON DELETE CASCADE
 );
 
 CREATE TABLE schedules (
