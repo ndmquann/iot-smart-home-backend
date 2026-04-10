@@ -10,7 +10,7 @@ fastapi_loop = None
 def on_connect(client, userdata, flags, rc):
     """Connect to Adafruit IO MQTT broker."""
     if rc == 0:
-        print("Successfullt connected to Adafruit IO MQTT broker")
+        print("Successfully connected to Adafruit IO MQTT broker")
         client.subscribe(f"{settings.ADAFRUIT_AIO_USERNAME}/feeds/#")
     else:
         print("Failed to connect, return code %d\n", rc)
@@ -50,7 +50,7 @@ async def process_mqtt_message(feed_id: str, payload: str):
                 print(f"Sensor value updated - Feed: {feed_id}, | Value: {sensor_value}")
             
             elif device['type'] == "controller":
-                status = 'on' if payload == '1' else 'off'
+                status = 'ON' if payload == '1' else 'OFF'
                 await crud_device.update_device_status(conn, feed_id.split('-')[0], status)
                 print(f"Controller status updated - Feed: {feed_id}, | Status: {payload}")
 
