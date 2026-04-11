@@ -10,8 +10,9 @@ class UserBase(BaseModel):
 # Properties required to create a user
 class UserCreate(UserBase):
     password: str
-    type: str # must be "admin" or "member
+    type: str # must be "admin" or "member"
     home_name: Optional[str] = None # only used for registration, ignored for login
+    home_id: Optional[int] = None # use for register member
 
 # Properties returned to client
 class UserResponse(UserBase):
