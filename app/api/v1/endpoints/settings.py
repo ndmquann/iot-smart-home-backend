@@ -331,7 +331,7 @@ async def apply_setting(
         NotFoundException: If setting or device not found
     """
     try:
-        result = await crud_setting.apply_setting_to_device(conn, device_id, setting_id)
+        result = await crud_setting.apply_setting_to_device(conn, device_id, setting_id, curr_admin['id'])
         
         admin_name = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = (f"{admin_name} successfully applied {result['setting_type']} "

@@ -354,7 +354,8 @@ async def delete_setting(conn: asyncpg.Connection, setting_id: int) -> str | Non
 async def apply_setting_to_device(
     conn: asyncpg.Connection, 
     device_id: int, 
-    setting_id: int
+    setting_id: int,
+    admin_id: int
 ):
     """
     Link a schedule or threshold setting to a device with business rule validation.
@@ -362,6 +363,7 @@ async def apply_setting_to_device(
     Associates a setting with a device, enforcing these rules:
     - Thresholds can ONLY be applied to sensors
     - Schedules can ONLY be applied to controllers
+    - Both must belong to the same home (enforced by admin_id)
     
     Args:
         conn: Async database connection
@@ -377,6 +379,7 @@ async def apply_setting_to_device(
     device_query = """
         SELECT 
             d.name,
+            d.admin_id,
             CASE
                 WHEN c.device_id IS NOT NULL THEN 'controller'
                 WHEN s.device_id IS NOT NULL THEN 'sensor'
@@ -389,11 +392,15 @@ async def apply_setting_to_device(
     device = await conn.fetchrow(device_query, device_id)
     if not device:
         raise ValueError(f"Device ID {device_id} not found or is invalid.")
+    if device['admin_id'] != admin_id:
+        raise ValueError(f"Device ID {device_id} does not belong to your home.")
     device_type = device['type']
+
     # 2. Determine the Setting Type
     setting_query = """
         SELECT
             set.name,
+            set.admin_id,
             CASE
                 WHEN sch.setting_id IS NOT NULL THEN 'schedule'
                 WHEN thr.setting_id IS NOT NULL THEN 'threshold'
@@ -406,7 +413,10 @@ async def apply_setting_to_device(
     setting = await conn.fetchrow(setting_query, setting_id)
     if not setting:
         raise ValueError(f"Setting ID {setting_id} not found or is invalid.")
+    if setting['admin_id'] != admin_id:
+        raise ValueError(f"Setting ID {setting_id} does not belong to your home.")
     setting_type = setting['type']
+    
     # 3. ENFORCE THE BUSINESS LOGIC
     if device_type == 'sensor' and setting_type != 'threshold':
         raise ValueError("Strict Rule: Sensors can only be applied with thresholds.")
