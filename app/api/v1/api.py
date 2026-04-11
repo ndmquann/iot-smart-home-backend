@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import users, zones, devices, logs, settings, auth
+from app.api.v1.endpoints import users, zones, devices, logs, settings, auth, report
 
 router = APIRouter()
 
@@ -9,3 +9,4 @@ router.include_router(devices.router, prefix="/devices", tags=["Devices"])
 router.include_router(logs.router, prefix="/logs", tags=["Logs"])
 router.include_router(settings.router, prefix="/settings", tags=["Settings"])
 router.include_router(auth.router, prefix="/auth", tags=["Auth"])
+router.include_router(report.router, prefix="/report", tags=["Report"])

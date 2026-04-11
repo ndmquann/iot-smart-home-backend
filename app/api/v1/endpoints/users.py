@@ -63,12 +63,9 @@ async def register_user(
             # create user
             new_user_id = await crud_user.create_user(
                 conn,
-                fname=user.fname,
-                lname=user.lname,
-                email=user.email,
-                hashed_password=hashed_password,
-                type=user.type.lower(),
-                home_id=home_id
+                user,
+                hashed_password,
+                home_id
             )
             return new_user_id
         
