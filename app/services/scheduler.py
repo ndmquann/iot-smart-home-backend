@@ -36,9 +36,10 @@ async def run_scheduler():
                     schedule_name = task['setting_name']
                     device_name = task['device_name']
                     home_id = task['home_id']
+                    reverse_action = "OFF" if task['action'] == "ON" else "ON"
 
                     mqtt_service.publish_command(feed_id, target_status)
-                    description = f"Schedule '{schedule_name}' ended, triggered action {task['action']} for device '{device_name}'."
+                    description = f"Schedule '{schedule_name}' ended, triggered action {reverse_action} for device '{device_name}'."
                     await Utils.generate_log(conn, description, "system action", home_id)
         except Exception as e:
             print(f"Error in scheduler: {str(e)}")
