@@ -74,7 +74,7 @@ async def get_all_devices(conn: asyncpg.Connection, home_id: int) -> list[dict]:
     records = await conn.fetch(query, admin_id)
     return [dict(record) for record in records]
 
-async def update_device_status(conn: asyncpg.Connection, feed_id: str, status: str) -> None:
+async def update_device_status(conn: asyncpg.Connection, device_id: int, status: str) -> None:
     """
     when Adafruit IO sends an update,
     update device's status in DB"""
@@ -82,11 +82,11 @@ async def update_device_status(conn: asyncpg.Connection, feed_id: str, status: s
         query = """
             UPDATE devices
             SET status = $1
-            WHERE feed_id = $2
+            WHERE id = $2
         """
-        await conn.execute(query, status, feed_id)
+        await conn.execute(query, status, device_id)
 
-async def update_sensor_value(conn: asyncpg.Connection, feed_id: str, value: float) -> None:
+async def update_sensor_value(conn: asyncpg.Connection, device_id: int, value: float) -> None:
     """
     when Adafruit IO sends a sensor reading,
     update sensor's value in DB
@@ -96,17 +96,29 @@ async def update_sensor_value(conn: asyncpg.Connection, feed_id: str, value: flo
             UPDATE sensors
             SET value = $1
             FROM devices d
-            WHERE device_id = d.id AND d.feed_id = $2
+            WHERE device_id = $2
         """
-        await conn.execute(query, value, feed_id)
+        await conn.execute(query, value, device_id)
 
 async def get_device_by_feed_id(conn: asyncpg.Connection, feed_id: str) -> dict | None:
     """
-    look up a device by feed id to determine its type
+    Retrieve a device by its feed ID.
+    
+    Fetches complete device information from the devices table.
+    
+    Args:
+        conn: Async database connection
+        feed_id: Feed ID of the device to retrieve
+        
+    Returns:
+        dict: Device object if found, None otherwise
+
+    When to use:
+        Device id is not known, but feed id is
     """
     query = """
         SELECT
-            d.id,
+            d.*,
             CASE
                 WHEN s.device_id IS NOT NULL THEN 'sensor'
                 WHEN c.device_id IS NOT NULL THEN 'controller'
@@ -133,7 +145,16 @@ async def get_device_by_id(conn: asyncpg.Connection, device_id: int) -> dict | N
         dict: Device object if found, None otherwise
     """
     query = """
-        SELECT * FROM devices WHERE id = $1;
+        SELECT 
+            d.*,
+            CASE 
+                WHEN s.device_id IS NOT NULL THEN 'sensor'
+                WHEN c.device_id IS NOT NULL THEN 'controller'
+            END AS type
+        FROM devices d
+        LEFT JOIN controllers c ON d.id = c.device_id
+        LEFT JOIN sensors s ON d.id = s.device_id
+        WHERE d.id = $1;
     """
     record = await conn.fetchrow(query, device_id)
     return dict(record) if record else None

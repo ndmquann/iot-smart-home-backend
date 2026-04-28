@@ -2,7 +2,7 @@ import paho.mqtt.client as mqtt
 import asyncio
 from app.core.config import settings
 from app.db import database
-from app.crud import crud_device
+from app.crud import crud_device, crud_home
 from app.core.exceptions import NotFoundException
 
 fastapi_loop = None
@@ -39,20 +39,23 @@ async def process_mqtt_message(feed_id: str, payload: str):
     """Process incoming MQTT messages."""
     async with database.db_pool.acquire() as conn:
         try:
-            device = await crud_device.get_device_by_feed_id(conn, feed_id.split('-')[0])
+            feed = feed_id.split('-')[0]
+            device = await crud_device.get_device_by_feed_id(conn, feed)
 
             if not device:
                 raise NotFoundException(f"No device found for feed ID {feed_id}.")
             
+            device_id = device['id']
+            device_name = device['name']
             if device['type'] == "sensor":
                 sensor_value = float(payload)
-                await crud_device.update_sensor_value(conn, feed_id, sensor_value)
-                print(f"Sensor value updated - Feed: {feed_id}, | Value: {sensor_value}")
+                await crud_device.update_sensor_value(conn, device_id, sensor_value)
+                print(f"Sensor value updated - Device: {device_name} | Feed: {feed_id} | Value: {sensor_value}")
             
             elif device['type'] == "controller":
                 status = 'ON' if payload == '1' else 'OFF'
-                await crud_device.update_device_status(conn, feed_id.split('-')[0], status)
-                print(f"Controller status updated - Feed: {feed_id}, | Status: {payload}")
+                await crud_device.update_device_status(conn, device_id, status)
+                print(f"Controller status updated - Device: {device_name} | Feed: {feed_id} | Status: {payload}")
 
         except Exception as e:
             print(f"Failed to process MQTT message: {str(e)}")

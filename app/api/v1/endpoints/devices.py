@@ -115,8 +115,7 @@ async def toggle_device(
         raise NotFoundException(f"Device ID {device_id} not found.")
     
     # check device's type
-    device_type_info = await crud_device.get_device_by_feed_id(conn, device['feed_id'])
-    device_type = device_type_info['type'] if device_type_info else 'unknown'
+    device_type = device['type']
     
     if device_type == 'sensor':
         # only admin can toggle sensor
@@ -173,11 +172,15 @@ async def set_device_mode(
     if not device:
         raise NotFoundException(f"Device ID {device_id} not found.")
     
-    device_type_info = await crud_device.get_device_by_feed_id(conn, device['feed_id'])
-    if not device_type_info or device_type_info['type'] != 'controller':
+    device_type = device['type']
+    if device_type != 'controller':
         raise BadRequestException("Only controllers support setting modes.")
     
     await crud_device.update_controller_mode(conn, device_id, mode.lower())
+    
+    feed_id = f"{device['feed_id']}-mode"
+    dmode = '0' if mode.lower() == 'auto' else '1'
+    mqtt_service.publish_command(feed_id, dmode)
 
     user = f"{curr_user['fname']} {curr_user['lname']}".title()
     description = f"{user} set {device['name']}'s mode to {mode.upper()}."
@@ -220,8 +223,8 @@ async def set_device_speed(
     if not device:
         raise NotFoundException(f"Device ID {device_id} not found.")
     
-    device_type_info = await crud_device.get_device_by_feed_id(conn, device['feed_id'])
-    if not device_type_info or device_type_info['type'] != 'controller':
+    device_type = device['type']
+    if device_type != 'controller':
         raise BadRequestException("Only controllers support setting speeds.")
     
     await crud_device.update_controller_speed(conn, device_id, speed)
