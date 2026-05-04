@@ -12,6 +12,7 @@ import app.services.mqtt as mqtt_module
 from app.services.scheduler import run_scheduler
 from app.services.threshold_engine import run_threshold_engine
 from app.core.config import settings
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,6 +42,24 @@ async def lifespan(app: FastAPI):
     print("Database disconnected")
     
 app = FastAPI(title="Smart Home IoT Backend", lifespan=lifespan)
+
+# 1. Define the exact local addresses allowed to connect
+origins = [
+    "http://localhost",
+    "http://localhost:8000",   # Default for Python http.server
+    "http://127.0.0.1:8000",   
+    "http://localhost:5500",   # Default for VS Code Live Server
+    "http://127.0.0.1:5500",
+]
+
+# 2. Apply the restricted list to your middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,      # <--- Changed from ["*"] to origins
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"], 
+)
 
 app.include_router(router, prefix="/api/v1")
 
