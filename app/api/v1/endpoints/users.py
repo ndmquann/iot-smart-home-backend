@@ -101,7 +101,7 @@ async def get_user(
         raise NotFoundException(f"User with email {email} not found.")
     return user
 
-@router.delete("/{home_id}/{user_id}")
+@router.delete("/{user_id}")
 async def remove_user_from_home(
     user_id: int,
     conn: asyncpg.Connection = Depends(get_db_connection),
