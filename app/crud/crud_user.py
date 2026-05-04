@@ -1,5 +1,5 @@
 import asyncpg
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate, UserBase
 
 async def create_user(conn: asyncpg.Connection, user: UserCreate, hashed_password: str, home_id: int) -> dict:
     """
@@ -123,3 +123,15 @@ async def view_home_member(conn: asyncpg.Connection, home_id: int):
     """
     records = await conn.fetch(query, home_id)
     return [dict(record) for record in records]
+
+async def update_user_info(
+    conn: asyncpg.Connection,
+    user_id: int,
+    new_user: UserBase
+):
+    query = """
+        UPDATE users
+        SET fname = $1, lname = $2, email = $3
+        WHERE id = $4
+    """
+    await conn.execute(query, new_user.fname, new_user.lname, new_user.email, user_id)

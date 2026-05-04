@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 import asyncpg
 
 from app.db.database import get_db_connection
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserBase
 from app.crud import crud_user, crud_home
 from app.core.security import get_password_hash
 from app.core.exceptions import BadRequestException, NotFoundException, DatabaseException
@@ -151,3 +151,23 @@ async def get_home_members(
     """
     members = await crud_user.view_home_member(conn, curr_user['home_id'])
     return members
+
+@router.put("/{user_id}")
+async def update_user_info(
+    new_user: UserBase,
+    curr_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    Update user information.
+    
+    Args:
+        new_user: UserBase schema with updated values
+        curr_user: Current authenticated user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message
+    """
+    await crud_user.update_user_info(conn, curr_user['id'], new_user)
+    return {"message": "Successfully updated user information."}

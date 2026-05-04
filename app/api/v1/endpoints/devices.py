@@ -3,7 +3,7 @@ from typing import List
 import asyncpg
 
 from app.db.database import get_db_connection
-from app.schemas.device import DeviceCreate, DeviceResponse, SensorHistoryResponse
+from app.schemas.device import DeviceCreate, DeviceResponse, SensorHistoryResponse, DeviceBase
 from app.crud import crud_device, crud_user
 from app.api.dependencies import get_current_admin, get_current_user
 from app.core.exceptions import BadRequestException, NotFoundException, UnauthorizedException, DatabaseException
@@ -335,3 +335,40 @@ async def read_device_history(
     
     history = await crud_device.get_sensor_history(conn, device_id, limit)
     return history
+
+@router.put("/{device_id}")
+async def update_device_details(
+    device_id: int,
+    new_device: DeviceBase,
+    curr_admin: dict = Depends(get_current_admin),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    Update device details (name, zone_id, feed_id).
+    
+    This action generates an admin log entry.
+    
+    Args:
+        device_id: ID of the device to update
+        new_device: DeviceBase schema with name, zone_id, feed_id
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message with updated device details
+        
+    Raises:
+        NotFoundException: If device not found
+    """
+    device = await crud_device.read_device_detail(conn, device_id)
+    if not device:
+        raise NotFoundException(f"Device ID {device_id} not found.")
+    
+    await crud_device.update_device_detail(conn, device_id, new_device)
+    admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
+    description = f"{admin} updated device '{device['name']}'."
+    await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
+
+    return {
+        "message": f"Successfully updated '{device['name']}'."
+    }

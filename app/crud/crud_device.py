@@ -1,5 +1,5 @@
 import asyncpg
-from app.schemas.device import DeviceCreate
+from app.schemas.device import DeviceCreate, DeviceBase
 from typing import List
 from app.utils import Utils
 
@@ -273,3 +273,15 @@ async def get_sensor_history(
     """
     records = await conn.fetch(query, device_id, limit)
     return [dict(record) for record in records]
+
+async def update_device_detail(
+    conn: asyncpg.Connection,
+    device_id: int,
+    new_device: DeviceBase
+):
+    query = """
+        UPDATE devices
+        SET name = $1, zone_id = $2, feed_id = $3
+        WHERE id = $4;
+    """
+    await conn.execute(query, new_device.name, new_device.zone_id, new_device.feed_id, device_id)

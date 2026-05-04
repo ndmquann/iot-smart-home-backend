@@ -139,3 +139,34 @@ async def delete_floor(conn: asyncpg.Connection, floor: int, home_id: int) -> li
         await conn.execute("DELETE FROM zones WHERE floor = $1 AND admin_id = $2;", floor, admin_id)
     
     return room_names
+
+async def get_zone_by_id(conn: asyncpg.Connection, zone_id: int) -> dict | None:
+    query = """
+        SELECT *
+        FROM zones
+        WHERE id = $1;
+    """
+    record = await conn.fetchrow(query, zone_id)
+    return dict(record) if record else None
+
+async def update_zone(
+    conn: asyncpg.Connection,
+    zone_id: int,
+    new_zone: ZoneCreate
+):
+    """
+    Update an existing zone's details.
+    
+    Updates a zone's name and floor number
+    
+    Args:
+        conn: Async database connection
+        zone_id: ID of the zone to update
+        new_zone: ZoneCreate schema with new room name and floor number
+    """
+    query = """
+        UPDATE zones
+        SET floor = $2, room = $3
+        WHERE id = $1
+    """
+    await conn.execute(query, zone_id, new_zone.floor, new_zone.room)

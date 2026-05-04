@@ -183,3 +183,37 @@ async def remove_floor(
         "message": f"Successfully deleted Floor {floor}.",
         "deleted_rooms": deleted_rooms
     }
+
+@router.put("/{zone_id}")
+async def update_zone_details(
+    zone_id: int,
+    new_zone: ZoneCreate,
+    curr_admin: dict = Depends(get_current_admin),
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    Update a zone (room) in the system.
+    
+    Updates an existing zone record with new details. Only admins can update zones.
+    This action generates an admin log entry.
+    
+    Args:
+        zone_id: ID of the zone to update
+        new_zone: ZoneCreate schema with new room name and floor number
+        curr_admin: Current authenticated admin user
+        conn: Async database connection
+        
+    Returns:
+        dict: Success message with updated zone details (room and floor)
+        
+    Raises:
+        NotFoundException: If zone not found
+    """
+    zone = await crud_zone.get_zone_by_id(conn, zone_id)
+    if not zone:
+        raise NotFoundException(f"Zone ID {zone_id} not found in Home ID {curr_admin['home_id']}.")
+    
+    await crud_zone.update_zone(conn, zone_id, new_zone)
+    return {
+        "message": f"Successfully updated Room '{zone['room']} ({zone['floor']})'."
+    }
