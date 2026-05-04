@@ -134,7 +134,7 @@ async def remove_user_from_home(
         "message": f"Successfully removed {user} from home."
     }
 
-@router.get("/home")
+@router.get("/home/members")
 async def get_home_members(
     curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
