@@ -104,23 +104,21 @@ async def get_user(
 @router.delete("/{home_id}/{user_id}")
 async def remove_user_from_home(
     user_id: int,
-    home_id: int,
     conn: asyncpg.Connection = Depends(get_db_connection),
     curr_admin: dict = Depends(get_current_admin)
 ):
     """
-    Delete a user from the database based on their user ID and admin ID.
+    Delete a user from the database based on their user ID.
     
     Args:
         user_id: ID of the user to delete
-        home_id: ID of the home the user belongs to
         conn: Async database connection
         
     Returns:
         dict: User object with fname and lname if found, None otherwise
     """
     try:
-        user_record = await crud_user.delete_user(conn, user_id, home_id)
+        user_record = await crud_user.delete_user(conn, user_id, curr_admin['home_id'])
     except Exception as e:
         raise DatabaseException(f"Failed to remove user from home: {str(e)}")
     
