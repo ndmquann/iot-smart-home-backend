@@ -101,7 +101,7 @@ async def get_user(
         raise NotFoundException(f"User with email {email} not found.")
     return user
 
-@router.delete("/{user_id}")
+@router.delete("/{home_id}/{user_id}")
 async def remove_user_from_home(
     user_id: int,
     home_id: int,
@@ -119,11 +119,14 @@ async def remove_user_from_home(
     Returns:
         dict: User object with fname and lname if found, None otherwise
     """
-    user_record = await crud_user.delete_user(conn, user_id, home_id)
+    try:
+        user_record = await crud_user.delete_user(conn, user_id, home_id)
+    except Exception as e:
+        raise DatabaseException(f"Failed to remove user from home: {str(e)}")
+    
     if not user_record:
         raise NotFoundException(f"User with ID {user_id} not found.")
 
-    
     admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
     user = f"{user_record['fname']} {user_record['lname']}".title()
     description = f"{admin} removed user {user} from home."

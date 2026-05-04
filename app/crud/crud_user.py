@@ -87,7 +87,9 @@ async def is_admin(conn: asyncpg.Connection, user_id: int) -> bool:
 
 async def delete_user(conn: asyncpg.Connection, user_id: int, home_id: int) -> dict | None:
     """
-    Delete a user from the database based on their user ID and admin ID.
+    Delete a user from the database based on their user ID and home ID.
+    
+    Permanently removes a user record. Validation ensures there is at least one admin in the home.
     
     Args:
         conn: Async database connection
@@ -97,6 +99,15 @@ async def delete_user(conn: asyncpg.Connection, user_id: int, home_id: int) -> d
     Returns:
         dict: User object with fname and lname if found, None otherwise
     """
+    number_admin = """
+        SELECT COUNT(*)
+        FROM home_group_view
+        WHERE home_id = $1 AND user_type = 'admin';
+    """
+    record = await conn.fetchrow(number_admin, home_id)
+    if record[0] == 1:
+        raise Exception("Cannot delete last admin.")
+    
     query = """
         DELETE FROM users
         WHERE id = $1 AND home_id = $2
