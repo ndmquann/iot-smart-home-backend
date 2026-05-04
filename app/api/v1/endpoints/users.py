@@ -6,7 +6,7 @@ from app.schemas.user import UserCreate, UserResponse
 from app.crud import crud_user, crud_home
 from app.core.security import get_password_hash
 from app.core.exceptions import BadRequestException, NotFoundException, DatabaseException
-from app.api.dependencies import get_current_admin
+from app.api.dependencies import get_current_admin, get_current_user
 from app.utils import Utils
 
 router = APIRouter()
@@ -134,25 +134,20 @@ async def remove_user_from_home(
         "message": f"Successfully removed {user} from home."
     }
 
-@router.get("/home/{home_id}")
+@router.get("/home")
 async def get_home_members(
-    home_id: int,
+    curr_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
     """
     Retrieve all members in a home.
     
     Args:
-        home_id: ID of the home to retrieve members from
+        curr_user: Current authenticated user
         conn: Async database connection
         
     Returns:
         list: List of UserResponse objects for members in the home
-        
-    Raises:
-        NotFoundException: If home has no members
     """
-    members = await crud_user.view_home_member(conn, home_id)
-    if not members:
-        raise NotFoundException(f"Home ID {home_id} has no members.")
+    members = await crud_user.view_home_member(conn, curr_user['home_id'])
     return members
