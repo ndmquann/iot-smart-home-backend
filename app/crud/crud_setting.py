@@ -182,7 +182,7 @@ async def create_threshold(
     
     Args:
         conn: Async database connection
-        threshold: ThresholdCreate schema with name, value, condition, target_device_id, action
+        threshold: ThresholdCreate schema with name, value, condition, action
         admin_id: ID of the admin creating the threshold
         
     Returns:
@@ -200,16 +200,15 @@ async def create_threshold(
 
         # 2. insert into thresholds table
         query_threshold = """
-            INSERT INTO thresholds (setting_id, value, condition, target_device_id)
-            VALUES ($1, $2, $3, $4)
-            RETURNING setting_id, value, condition, target_device_id;
+            INSERT INTO thresholds (setting_id, value, condition)
+            VALUES ($1, $2, $3)
+            RETURNING setting_id, value, condition;
         """
         threshold_data = await conn.fetchrow(
             query_threshold,
             setting_id,
             threshold.value,
-            threshold.condition,
-            threshold.target_device_id
+            threshold.condition
         )
 
         # merge
@@ -243,7 +242,6 @@ async def get_all_thresholds(conn: asyncpg.Connection, home_id: int) -> list[dic
             thr.value, 
             thr.condition,
             set.action, 
-            thr.target_device_id
         FROM settings set
         JOIN thresholds thr ON set.id = thr.setting_id
         WHERE set.admin_id = $1
@@ -273,7 +271,6 @@ async def get_threshold_by_id(conn: asyncpg.Connection, setting_id: int) -> dict
             thr.value, 
             thr.condition,
             set.action,
-            thr.target_device_id
         FROM settings set
         JOIN thresholds thr ON set.id = thr.setting_id
         WHERE set.id = $1
@@ -313,15 +310,14 @@ async def update_threshold(
         # 2. update thresholds table
         query_threshold = """    
             UPDATE thresholds
-            SET value = $1, condition = $2, target_device_id = $3
-            WHERE setting_id = $4
-            RETURNING setting_id, value, condition, target_device_id;
+            SET value = $1, condition = $2
+            WHERE setting_id = $3
+            RETURNING setting_id, value, condition;
         """
         await conn.fetchrow(
             query_threshold,
             new_threshold.value,
             new_threshold.condition,
-            new_threshold.target_device_id,
             setting_id
         )
     
@@ -542,7 +538,7 @@ async def get_triggered_thresholds(conn: asyncpg.Connection) -> list[dict]:
     """
     query = """
         SELECT
-            t_ctrl.id AS target_device_id,
+            a.device_id AS target_device_id,
             t_ctrl.name AS target_device_name,
             t_ctrl.feed_id AS target_feed_id,
             set.action,
@@ -556,7 +552,7 @@ async def get_triggered_thresholds(conn: asyncpg.Connection) -> list[dict]:
         JOIN users u ON set.admin_id = u.id
         JOIN devices s_sensor ON a.device_id = s_sensor.id -- The Sensor reading the data
         JOIN sensors s ON s_sensor.id = s.device_id
-        JOIN devices t_ctrl ON thr.target_device_id = t_ctrl.id -- The Target Controller to turn ON/OFF
+        JOIN devices t_ctrl ON a.device_id = t_ctrl.id -- The Target Controller to turn ON/OFF
         WHERE
             (
                 (thr.condition = 'true' AND s.value >= thr.value) -- Greater than or equal

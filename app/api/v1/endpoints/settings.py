@@ -153,7 +153,7 @@ async def create_new_threshold(
     a specified limit. Only admins can create thresholds. This action generates an admin log entry.
     
     Args:
-        threshold: ThresholdCreate schema with name, value, condition, target_device_id, action
+        threshold: ThresholdCreate schema with name, value, condition, action
         curr_admin: Current authenticated admin user
         conn: Async database connection
         
@@ -165,9 +165,8 @@ async def create_new_threshold(
     """
     try:
         new_threshold = await crud_setting.create_threshold(conn, threshold, curr_admin['id'])
-        device = await crud_device.get_device_by_id(conn, threshold.target_device_id)
         admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
-        description = f"{admin} created Threshold '{threshold.name}' with action {threshold.action} on device '{device['name']}'."
+        description = f"{admin} created Threshold '{threshold.name}' with action '{threshold.action.upper()}'."
         await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
 
         return new_threshold

@@ -33,7 +33,6 @@ class ScheduleResponse(ScheduleBase):
 class ThresholdBase(SettingBase):
     value: float
     condition: bool # True: greater or equal than, False: less or equal than
-    target_device_id: int
 
 class ThresholdCreate(ThresholdBase):
     type: str = "threshold"
