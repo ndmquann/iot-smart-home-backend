@@ -84,3 +84,31 @@ async def is_admin(conn: asyncpg.Connection, user_id: int) -> bool:
     query = "SELECT 1 FROM admins WHERE uid = $1;"
     record = await conn.fetchrow(query, user_id)
     return bool(record)
+
+async def delete_user(conn: asyncpg.Connection, user_id: int, home_id: int) -> dict | None:
+    """
+    Delete a user from the database based on their user ID and admin ID.
+    
+    Args:
+        conn: Async database connection
+        user_id: ID of the user to delete
+        home_id: ID of the home the user belongs to
+        
+    Returns:
+        dict: User object with fname and lname if found, None otherwise
+    """
+    query = """
+        DELETE FROM users
+        WHERE id = $1 AND home_id = $2
+        RETURNING fname, lname;
+    """
+    record = await conn.fetchrow(query, user_id, home_id)
+    return dict(record) if record else None
+
+async def view_home_member(conn: asyncpg.Connection, home_id: int):
+    query = """
+        SELECT * FROM home_group_view
+        WHERE home_id = $1;
+    """
+    records = await conn.fetch(query, home_id)
+    return [dict(record) for record in records]

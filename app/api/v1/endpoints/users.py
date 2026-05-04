@@ -6,6 +6,8 @@ from app.schemas.user import UserCreate, UserResponse
 from app.crud import crud_user, crud_home
 from app.core.security import get_password_hash
 from app.core.exceptions import BadRequestException, NotFoundException, DatabaseException
+from app.api.dependencies import get_current_admin
+from app.utils import Utils
 
 router = APIRouter()
 
@@ -98,3 +100,58 @@ async def get_user(
     if not user:
         raise NotFoundException(f"User with email {email} not found.")
     return user
+
+@router.delete("/{user_id}")
+async def remove_user_from_home(
+    user_id: int,
+    home_id: int,
+    conn: asyncpg.Connection = Depends(get_db_connection),
+    curr_admin: dict = Depends(get_current_admin)
+):
+    """
+    Delete a user from the database based on their user ID and admin ID.
+    
+    Args:
+        user_id: ID of the user to delete
+        home_id: ID of the home the user belongs to
+        conn: Async database connection
+        
+    Returns:
+        dict: User object with fname and lname if found, None otherwise
+    """
+    user_record = await crud_user.delete_user(conn, user_id, home_id)
+    if not user_record:
+        raise NotFoundException(f"User with ID {user_id} not found.")
+
+    
+    admin = f"{curr_admin['fname']} {curr_admin['lname']}".title()
+    user = f"{user_record['fname']} {user_record['lname']}".title()
+    description = f"{admin} removed user {user} from home."
+    await Utils.generate_log(conn, description, "admin action", curr_admin['home_id'])
+
+    return {
+        "message": f"Successfully removed {user} from home."
+    }
+
+@router.get("/home/{home_id}")
+async def get_home_members(
+    home_id: int,
+    conn: asyncpg.Connection = Depends(get_db_connection)
+):
+    """
+    Retrieve all members in a home.
+    
+    Args:
+        home_id: ID of the home to retrieve members from
+        conn: Async database connection
+        
+    Returns:
+        list: List of UserResponse objects for members in the home
+        
+    Raises:
+        NotFoundException: If home has no members
+    """
+    members = await crud_user.view_home_member(conn, home_id)
+    if not members:
+        raise NotFoundException(f"Home ID {home_id} has no members.")
+    return members
