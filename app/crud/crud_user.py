@@ -55,7 +55,7 @@ async def get_user_by_email(conn: asyncpg.Connection, email: str) -> dict | None
     """
     query = """
         SELECT 
-            u.id, u.fname, u.lname, u.email, u.password, u.status, u.home_id,
+            u.id, u.fname, u.lname, u.email, u.password, u.status, u.home_id, h.name AS home_name,
             CASE 
                 WHEN a.uid IS NOT NULL THEN 'admin'
                 WHEN m.uid IS NOT NULL THEN 'member'
@@ -63,6 +63,7 @@ async def get_user_by_email(conn: asyncpg.Connection, email: str) -> dict | None
         FROM users u
         LEFT JOIN admins a ON u.id = a.uid
         LEFT JOIN members m ON u.id = m.uid
+        LEFT JOIN homes h ON u.home_id = h.id
         WHERE u.email = $1;
     """
     record = await conn.fetchrow(query, email)

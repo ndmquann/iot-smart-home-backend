@@ -20,6 +20,7 @@ class UserResponse(UserBase):
     status: bool
     type: str
     home_id: int
+    home_name: str
 
     class Config:
         from_attributes = True

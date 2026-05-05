@@ -91,7 +91,7 @@ async def get_user(
         conn: Async database connection
         
     Returns:
-        UserResponse: User object with id, fname, lname, email, status, home_id, and type
+        UserResponse: User object with id, fname, lname, email, status, home_id, home_name and type
         
     Raises:
         NotFoundException: If user with email not found
