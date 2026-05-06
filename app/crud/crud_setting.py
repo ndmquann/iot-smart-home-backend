@@ -241,7 +241,7 @@ async def get_all_thresholds(conn: asyncpg.Connection, home_id: int) -> list[dic
             set.name, 
             thr.value, 
             thr.condition,
-            set.action, 
+            set.action
         FROM settings set
         JOIN thresholds thr ON set.id = thr.setting_id
         WHERE set.admin_id = $1
@@ -270,7 +270,7 @@ async def get_threshold_by_id(conn: asyncpg.Connection, setting_id: int) -> dict
             set.name, 
             thr.value, 
             thr.condition,
-            set.action,
+            set.action
         FROM settings set
         JOIN thresholds thr ON set.id = thr.setting_id
         WHERE set.id = $1
