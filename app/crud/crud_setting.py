@@ -433,7 +433,7 @@ async def apply_setting_to_device(
 # ==========================================
 # SCHEDULER HELPER
 # ==========================================
-async def get_due_start_schedules(conn: asyncpg.Connection, current_time: datetime) -> list[dict]:
+async def get_due_start_schedules(conn: asyncpg.Connection, current_time: datetime, home_id:int) -> list[dict]:
     """
     Fetch schedules that should start executing at the current time.
     
@@ -443,6 +443,7 @@ async def get_due_start_schedules(conn: asyncpg.Connection, current_time: dateti
     Args:
         conn: Async database connection
         current_time: Current datetime to match against schedule time_start
+        home_id: ID of the home to filter schedules
         
     Returns:
         list: List of applicable schedules with device and action details
@@ -453,8 +454,7 @@ async def get_due_start_schedules(conn: asyncpg.Connection, current_time: dateti
             d.name AS device_name,
             d.feed_id,
             set.name AS setting_name,
-            set.action,
-            u.home_id
+            set.action
         FROM apply a
         JOIN schedules sch ON a.setting_id = sch.setting_id
         JOIN devices d ON a.device_id = d.id
@@ -465,17 +465,19 @@ async def get_due_start_schedules(conn: asyncpg.Connection, current_time: dateti
             AND (sch.date_end IS NULL OR $1 <= sch.date_end)
             AND $2 = EXTRACT(HOUR FROM sch.time_start)
             AND $3 = EXTRACT(MINUTE FROM sch.time_start)
-            AND d.status != set.action;
+            AND d.status != set.action
+            AND u.home_id = $4;
     """
     records = await conn.fetch(
         query, 
         current_time.date(),
         current_time.hour,
-        current_time.minute
+        current_time.minute,
+        home_id
         )
     return [dict(record) for record in records]
 
-async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime) -> list[dict]:
+async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime, home_id:int) -> list[dict]:
     """
     Fetch schedules that should stop executing at the current time.
     
@@ -485,7 +487,8 @@ async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime
     Args:
         conn: Async database connection
         current_time: Current datetime to calculate schedule end times
-        
+        home_id: ID of the home to filter schedules
+
     Returns:
         list: List of applicable schedules with device details for turning off
     """
@@ -495,8 +498,7 @@ async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime
             d.name AS device_name,
             d.feed_id,
             set.name AS setting_name,
-            set.action,
-            u.home_id
+            set.action
         FROM apply a
         JOIN schedules sch ON a.setting_id = sch.setting_id
         JOIN devices d ON a.device_id = d.id
@@ -512,17 +514,19 @@ async def get_due_end_schedules(conn: asyncpg.Connection, current_time: datetime
             AND d.status != CASE 
                 WHEN set.action = 'ON' THEN 'OFF'
                 ELSE 'ON'
-            END;
+            END
+            AND u.home_id = $4;
     """
     records = await conn.fetch(
         query, 
         current_time.date(),
         current_time.hour,
-        current_time.minute
+        current_time.minute,
+        home_id
         )
     return [dict(record) for record in records]
 
-async def get_triggered_thresholds(conn: asyncpg.Connection) -> list[dict]:
+async def get_triggered_thresholds(conn: asyncpg.Connection, home_id: int) -> list[dict]:
     """
     Fetch thresholds whose conditions have been met by current sensor values.
     
@@ -532,6 +536,7 @@ async def get_triggered_thresholds(conn: asyncpg.Connection) -> list[dict]:
     
     Args:
         conn: Async database connection
+        home_id: ID of the home to filter thresholds
         
     Returns:
         list: List of triggered thresholds with sensor, target device, and action details
@@ -559,7 +564,8 @@ async def get_triggered_thresholds(conn: asyncpg.Connection) -> list[dict]:
                 OR 
                 (thr.condition = 'false' AND s.value <= thr.value) -- Lower than or equal
             )
-            AND t_ctrl.status != set.action;
+            AND t_ctrl.status != set.action
+            AND u.home_id = $1;
     """
-    records = await conn.fetch(query)
+    records = await conn.fetch(query, home_id)
     return [dict(record) for record in records]

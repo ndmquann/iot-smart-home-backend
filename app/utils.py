@@ -20,3 +20,11 @@ class Utils:
             home_id=home_id
         )
         await crud_log.create_log(conn, log)
+
+    async def get_all_home(conn: asyncpg.Connection) -> list[dict]:
+        query = """
+            SELECT *
+            FROM homes;
+        """
+        records = await conn.fetch(query)
+        return [dict(record) for record in records]

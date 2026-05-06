@@ -131,7 +131,7 @@ async def toggle_device(
     mqtt_service.publish_command(feed_id, mqtt_value)
 
     user = f"{curr_user['fname']} {curr_user['lname']}".title()
-    description = f"{user} manually turned {action.upper()} the {device_type.capitalize()}: {device['name']}."
+    description = f"{user} manually turned '{action.upper()}' the {device_type.capitalize()}: {device['name']}."
     await Utils.generate_log(conn, description, "user action", curr_user['home_id'])
     
     return {
@@ -183,11 +183,11 @@ async def set_device_mode(
     mqtt_service.publish_command(feed_id, dmode)
 
     user = f"{curr_user['fname']} {curr_user['lname']}".title()
-    description = f"{user} set {device['name']}'s mode to {mode.upper()}."
+    description = f"{user} set {device['name']}'s mode to '{mode.upper()}'."
     await Utils.generate_log(conn, description, "user action", curr_user['home_id'])
 
     return {
-        "message": f"Successfully set {device['name']}'s mode to {mode.upper()}."
+        "message": f"Successfully set {device['name']}'s mode to '{mode.upper()}'."
     }
 
 @router.post("/{device_id}/speed")
@@ -233,11 +233,11 @@ async def set_device_speed(
     mqtt_service.publish_command(feed_id, str(speed))
 
     user = f"{curr_user['fname']} {curr_user['lname']}".title()
-    description = f"{user} set {device['name']}'s speed to {speed}."
+    description = f"{user} set {device['name']}'s speed to '{speed}'."
     await Utils.generate_log(conn, description, "user action", curr_user['home_id'])
 
     return {
-        "message": f"Successfully set {device['name']}'s speed to {speed}.",
+        "message": f"Successfully set {device['name']}'s speed to '{speed}'.",
         "feed_id": feed_id
     }
 

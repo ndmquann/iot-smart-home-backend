@@ -84,7 +84,7 @@ async def update_device_status(conn: asyncpg.Connection, device_id: int, status:
             SET status = $1
             WHERE id = $2
         """
-        await conn.execute(query, status, device_id)
+        await conn.execute(query, status.upper(), device_id)
 
 async def update_sensor_value(conn: asyncpg.Connection, device_id: int, value: float) -> None:
     """

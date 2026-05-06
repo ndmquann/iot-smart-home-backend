@@ -15,32 +15,33 @@ async def run_scheduler():
         try:
             curr_time = datetime.now()
             async for conn in get_db_connection():
-                start_task = await crud_setting.get_due_start_schedules(conn, curr_time)
+                homes = await Utils.get_all_home(conn)
+                for home in homes:
+                    home_id = home['id']
+                    start_task = await crud_setting.get_due_start_schedules(conn, curr_time, home_id)
 
-                for task in start_task:
-                    target_status = '1' if task['action'] == 'ON' else '0'
-                    feed_id = f"{task['feed_id']}-control"
-                    schedule_name = task['setting_name']
-                    device_name = task['device_name']
-                    home_id = task['home_id']
+                    for task in start_task:
+                        target_status = '1' if task['action'] == 'ON' else '0'
+                        feed_id = f"{task['feed_id']}-control"
+                        schedule_name = task['setting_name']
+                        device_name = task['device_name']
 
-                    mqtt_service.publish_command(feed_id, target_status)
-                    description = f"Schedule '{schedule_name}' triggered action {task['action']} for device '{device_name}'."
-                    await Utils.generate_log(conn, description, "system action", home_id)
-                
-                end_task = await crud_setting.get_due_end_schedules(conn, curr_time)
+                        mqtt_service.publish_command(feed_id, target_status)
+                        description = f"Schedule '{schedule_name}' triggered action '{task['action'].upper()}' for device '{device_name}'."
+                        await Utils.generate_log(conn, description, "system action", home_id)
+                    
+                    end_task = await crud_setting.get_due_end_schedules(conn, curr_time, home_id)
 
-                for task in end_task:
-                    target_status = "0" if task['action'] == "ON" else "1"
-                    feed_id = f"{task['feed_id']}-control"
-                    schedule_name = task['setting_name']
-                    device_name = task['device_name']
-                    home_id = task['home_id']
-                    reverse_action = "OFF" if task['action'] == "ON" else "ON"
+                    for task in end_task:
+                        target_status = "0" if task['action'] == "ON" else "1"
+                        feed_id = f"{task['feed_id']}-control"
+                        schedule_name = task['setting_name']
+                        device_name = task['device_name']
+                        reverse_action = "OFF" if task['action'] == "ON" else "ON"
 
-                    mqtt_service.publish_command(feed_id, target_status)
-                    description = f"Schedule '{schedule_name}' ended, triggered action {reverse_action} for device '{device_name}'."
-                    await Utils.generate_log(conn, description, "system action", home_id)
+                        mqtt_service.publish_command(feed_id, target_status)
+                        description = f"Schedule '{schedule_name}' ended, triggered action {reverse_action} for device '{device_name}'."
+                        await Utils.generate_log(conn, description, "system action", home_id)
         except Exception as e:
             print(f"Error in scheduler: {str(e)}")
 
