@@ -106,7 +106,7 @@ async def delete_user(conn: asyncpg.Connection, user_id: int, home_id: int) -> d
         WHERE home_id = $1 AND user_type = 'admin';
     """
     record = await conn.fetchrow(number_admin, home_id)
-    if record[0] == 1:
+    if record[0] == 1 and await is_admin(conn, user_id):
         raise Exception("Cannot delete last admin.")
     
     query = """
