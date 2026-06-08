@@ -409,6 +409,25 @@ async def apply_setting_to_device(
         LEFT JOIN thresholds thr ON set.id = thr.setting_id
         WHERE set.id = $1;
     """
+
+    target_query = """
+        SELECT 
+            d.name,
+            d.admin_id,
+            CASE
+                WHEN c.device_id IS NOT NULL THEN 'controller'
+                WHEN s.device_id IS NOT NULL THEN 'sensor'
+            END AS type
+        FROM devices d
+        LEFT JOIN controllers c ON d.id = c.device_id
+        LEFT JOIN sensors s ON d.id = s.device_id
+        WHERE d.id = $1;
+    """
+
+    target_device = await conn.fetchrow(target_query, target_device_id)
+    if not target_device:
+        raise ValueError(f"Target device ID {target_device_id} not found or is invalid.")
+
     setting = await conn.fetchrow(setting_query, setting_id)
     if not setting:
         raise ValueError(f"Setting ID {setting_id} not found or is invalid.")
@@ -435,7 +454,8 @@ async def apply_setting_to_device(
             "device_name": device['name'], 
             "setting_type": setting_type, 
             "setting_name": setting['name'],
-            "target_device_id": target_device_id,
+            "target_device_type": target_device['type'],
+            "target_device_name": target_device['name']
             }
 
 # ==========================================

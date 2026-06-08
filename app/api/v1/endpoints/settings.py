@@ -301,7 +301,7 @@ async def remove_setting(
         "message": f"Successfully deleted '{setting_name}'."
     }
 
-@router.post("/{setting_id}/apply/{device_id}", status_code=status.HTTP_200_OK)
+@router.post("/{setting_id}/apply/{device_id}/{target_device_id}", status_code=status.HTTP_200_OK)
 async def apply_setting(
     setting_id: int,
     device_id: int,
@@ -336,7 +336,7 @@ async def apply_setting(
         
         admin_name = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = (f"{admin_name} successfully applied {result['setting_type']} "
-                       f"'{result['setting_name']}' to {result['device_type']} {result['device_name']}.")
+                       f"'{result['setting_name']}' to {result['target_device_type']} {result['target_device_name']}.")
         
         await Utils.generate_log(
             conn,
@@ -351,7 +351,9 @@ async def apply_setting(
                 "device_id": device_id,
                 "setting_id": setting_id,
                 "device_type": result['device_type'],
-                "setting_type": result['setting_type']
+                "setting_type": result['setting_type'],
+                "target_device_type": result['target_device_type'],
+                "target_device_name": result['target_device_name']
             }
         }
 
