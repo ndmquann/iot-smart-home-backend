@@ -305,6 +305,7 @@ async def remove_setting(
 async def apply_setting(
     setting_id: int,
     device_id: int,
+    target_device_id: int,
     curr_admin: dict = Depends(get_current_admin),
     conn: asyncpg.Connection = Depends(get_db_connection)
 ):
@@ -319,6 +320,7 @@ async def apply_setting(
     Args:
         setting_id: ID of the schedule or threshold to apply
         device_id: ID of the device to apply setting to
+        target_device_id: ID of the target device for threshold actions
         curr_admin: Current authenticated admin user
         conn: Async database connection
         
@@ -330,7 +332,7 @@ async def apply_setting(
         NotFoundException: If setting or device not found
     """
     try:
-        result = await crud_setting.apply_setting_to_device(conn, device_id, setting_id, curr_admin['id'])
+        result = await crud_setting.apply_setting_to_device(conn, device_id, setting_id, target_device_id, curr_admin['id'])
         
         admin_name = f"{curr_admin['fname']} {curr_admin['lname']}".title()
         description = (f"{admin_name} successfully applied {result['setting_type']} "

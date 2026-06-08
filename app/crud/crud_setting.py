@@ -351,6 +351,7 @@ async def apply_setting_to_device(
     conn: asyncpg.Connection, 
     device_id: int, 
     setting_id: int,
+    target_device_id: int,
     admin_id: int
 ):
     """
@@ -365,6 +366,8 @@ async def apply_setting_to_device(
         conn: Async database connection
         device_id: ID of the device to apply setting to
         setting_id: ID of the schedule or threshold to apply
+        target_device_id: ID of the target device
+        admin_id: ID of the admin applying the setting
         
     Returns:
         dict: Device type, device name, setting type, setting name for logging
@@ -421,14 +424,19 @@ async def apply_setting_to_device(
 
     # 4. Insert into the Apply table
     insert_query = """
-        INSERT INTO apply (device_id, setting_id)
-        VALUES ($1, $2)
+        INSERT INTO apply (device_id, setting_id, target_device)
+        VALUES ($1, $2, $3)
         ON CONFLICT DO NOTHING; -- Prevents errors if already applied
     """
-    await conn.execute(insert_query, device_id, setting_id)
+    await conn.execute(insert_query, device_id, setting_id, target_device_id)
     
     # Return types so the router can use them for logging
-    return {"device_type": device_type, "device_name": device['name'], "setting_type": setting_type, "setting_name": setting['name']}
+    return {"device_type": device_type, 
+            "device_name": device['name'], 
+            "setting_type": setting_type, 
+            "setting_name": setting['name'],
+            "target_device_id": target_device_id,
+            }
 
 # ==========================================
 # SCHEDULER HELPER
