@@ -543,7 +543,7 @@ async def get_triggered_thresholds(conn: asyncpg.Connection, home_id: int) -> li
     """
     query = """
         SELECT
-            a.device_id AS target_device_id,
+            a.target_device AS target_device_id,
             t_ctrl.name AS target_device_name,
             t_ctrl.feed_id AS target_feed_id,
             set.action,
@@ -557,7 +557,7 @@ async def get_triggered_thresholds(conn: asyncpg.Connection, home_id: int) -> li
         JOIN users u ON set.admin_id = u.id
         JOIN devices s_sensor ON a.device_id = s_sensor.id -- The Sensor reading the data
         JOIN sensors s ON s_sensor.id = s.device_id
-        JOIN devices t_ctrl ON a.device_id = t_ctrl.id -- The Target Controller to turn ON/OFF
+        JOIN devices t_ctrl ON a.target_device = t_ctrl.id -- The Target Controller to turn ON/OFF
         WHERE
             (
                 (thr.condition = 'true' AND s.value >= thr.value) -- Greater than or equal
