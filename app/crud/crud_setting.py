@@ -443,11 +443,20 @@ async def apply_setting_to_device(
 
     # 4. Insert into the Apply table
     insert_query = """
-        INSERT INTO apply (device_id, setting_id, target_device)
-        VALUES ($1, $2, $3)
+        INSERT INTO apply (device_id, setting_id)
+        VALUES ($1, $2)
         ON CONFLICT DO NOTHING; -- Prevents errors if already applied
     """
-    await conn.execute(insert_query, device_id, setting_id, target_device_id)
+    await conn.execute(insert_query, device_id, setting_id)
+    
+    # 5. If this is a threshold, also update the target_device in the thresholds table
+    if setting_type == 'threshold':
+        update_threshold_query = """
+            UPDATE thresholds
+            SET target_device = $1
+            WHERE setting_id = $2
+        """
+        await conn.execute(update_threshold_query, target_device_id, setting_id)
     
     # Return types so the router can use them for logging
     return {"device_type": device_type, 
@@ -571,7 +580,7 @@ async def get_triggered_thresholds(conn: asyncpg.Connection, home_id: int) -> li
     """
     query = """
         SELECT
-            a.target_device AS target_device_id,
+            thr.target_device AS target_device_id,
             t_ctrl.name AS target_device_name,
             t_ctrl.feed_id AS target_feed_id,
             set.action,
@@ -585,9 +594,9 @@ async def get_triggered_thresholds(conn: asyncpg.Connection, home_id: int) -> li
         JOIN users u ON set.admin_id = u.id
         JOIN devices s_sensor ON a.device_id = s_sensor.id -- The Sensor reading the data
         JOIN sensors s ON s_sensor.id = s.device_id
-        JOIN devices t_ctrl ON a.target_device = t_ctrl.id -- The Target Controller to turn ON/OFF
+        JOIN devices t_ctrl ON thr.target_device = t_ctrl.id -- The Target Controller to turn ON/OFF
         WHERE
-            a.target_device IS NOT NULL
+            thr.target_device IS NOT NULL
             AND (
                 (thr.condition = true AND s.value >= thr.value) -- Greater than or equal
                 OR 
