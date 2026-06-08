@@ -587,10 +587,11 @@ async def get_triggered_thresholds(conn: asyncpg.Connection, home_id: int) -> li
         JOIN sensors s ON s_sensor.id = s.device_id
         JOIN devices t_ctrl ON a.target_device = t_ctrl.id -- The Target Controller to turn ON/OFF
         WHERE
-            (
-                (thr.condition = 'true' AND s.value >= thr.value) -- Greater than or equal
+            a.target_device IS NOT NULL
+            AND (
+                (thr.condition = true AND s.value >= thr.value) -- Greater than or equal
                 OR 
-                (thr.condition = 'false' AND s.value <= thr.value) -- Lower than or equal
+                (thr.condition = false AND s.value <= thr.value) -- Lower than or equal
             )
             AND t_ctrl.status != set.action
             AND u.home_id = $1;

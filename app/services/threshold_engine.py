@@ -13,6 +13,11 @@ async def run_threshold_engine():
                     home_id = home['id']
                     trigger_task = await crud_setting.get_triggered_thresholds(conn, home_id)
                     for threshold in trigger_task:
+                        # Validate required fields before processing
+                        if not threshold.get('target_feed_id') or not threshold.get('target_device_id'):
+                            print(f"WARNING: Threshold missing target_device_id or feed_id. Skipping.")
+                            continue
+                        
                         target_status = '1' if threshold['action'] == 'ON' else '0'
                         feed_id = f"{threshold['target_feed_id']}-control"
                         device_name = threshold['target_device_name']

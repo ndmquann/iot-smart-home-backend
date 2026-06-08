@@ -21,6 +21,11 @@ async def run_scheduler():
                     start_task = await crud_setting.get_due_start_schedules(conn, curr_time, home_id)
 
                     for task in start_task:
+                        # Validate required fields before processing
+                        if not task.get('feed_id') or not task.get('device_id'):
+                            print(f"WARNING: Schedule missing device_id or feed_id. Skipping.")
+                            continue
+                        
                         target_status = '1' if task['action'] == 'ON' else '0'
                         feed_id = f"{task['feed_id']}-control"
                         schedule_name = task['setting_name']
@@ -33,6 +38,11 @@ async def run_scheduler():
                     end_task = await crud_setting.get_due_end_schedules(conn, curr_time, home_id)
 
                     for task in end_task:
+                        # Validate required fields before processing
+                        if not task.get('feed_id') or not task.get('device_id'):
+                            print(f"WARNING: Schedule missing device_id or feed_id. Skipping.")
+                            continue
+                        
                         target_status = "0" if task['action'] == "ON" else "1"
                         feed_id = f"{task['feed_id']}-control"
                         schedule_name = task['setting_name']
