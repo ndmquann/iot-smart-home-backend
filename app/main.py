@@ -28,12 +28,13 @@ async def lifespan(app: FastAPI):
 
     yield
     
-    if scheduler_task:
-        scheduler_task.cancel()
-        try:
-            await scheduler_task
-        except asyncio.CancelledError:
-            print("Scheduler task cancelled")
+    for task, name in [(scheduler_task, "Scheduler"), (threshold_task, "Threshold engine")]:
+        if task:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                print(f"{name} task cancelled")
 
     mqtt_client.loop_stop()
     mqtt_client.disconnect()
