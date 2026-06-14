@@ -15,8 +15,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib import colors
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table,
     TableStyle, PageBreak, KeepTogether
@@ -27,20 +25,6 @@ from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics import renderPDF
 
 from app.schemas.report import ReportSummary
-
-
-# ==========================================
-# FONT REGISTRATION FOR VIETNAMESE SUPPORT
-# ==========================================
-try:
-    pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
-    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'DejaVuSans-Bold.ttf'))
-    FONT_NAME = 'DejaVuSans'
-    FONT_BOLD = 'DejaVuSans-Bold'
-except:
-    # Fallback to standard fonts if DejaVu is not available
-    FONT_NAME = 'Helvetica'
-    FONT_BOLD = 'Helvetica-Bold'
 
 
 # ==========================================
@@ -119,7 +103,7 @@ def _header_style(header_color) -> TableStyle:
     return TableStyle([
         ('BACKGROUND',    (0, 0), (-1, 0), header_color),
         ('TEXTCOLOR',     (0, 0), (-1, 0), C_WHITE),
-        ('FONTNAME',      (0, 0), (-1, 0), FONT_BOLD),
+        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE',      (0, 0), (-1, -1), 9),
         ('ROWBACKGROUNDS',(0, 1), (-1, -1), [C_WHITE, C_LIGHT]),
         ('BOX',           (0, 0), (-1, -1), 0.8, C_BORDER),
@@ -158,11 +142,11 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     )
 
     styles = getSampleStyleSheet()
-    T  = ParagraphStyle('RPT_Title', parent=styles['Title'],   fontSize=22, textColor=C_NAVY,   spaceAfter=4, fontName=FONT_BOLD)
-    H1 = ParagraphStyle('RPT_H1',   parent=styles['Heading1'], fontSize=13, textColor=C_NAVY,   spaceAfter=4,  spaceBefore=10, fontName=FONT_BOLD)
-    H2 = ParagraphStyle('RPT_H2',   parent=styles['Heading2'], fontSize=10, textColor=C_BLUE,   spaceAfter=3, fontName=FONT_BOLD)
-    N  = ParagraphStyle('RPT_N',    parent=styles['Normal'],   fontSize=9,  textColor=C_NAVY, fontName=FONT_NAME)
-    SM = ParagraphStyle('RPT_SM',   parent=styles['Normal'],   fontSize=8,  textColor=colors.HexColor('#555555'), fontName=FONT_NAME)
+    T  = ParagraphStyle('RPT_Title', parent=styles['Title'],   fontSize=22, textColor=C_NAVY,   spaceAfter=4)
+    H1 = ParagraphStyle('RPT_H1',   parent=styles['Heading1'], fontSize=13, textColor=C_NAVY,   spaceAfter=4,  spaceBefore=10)
+    H2 = ParagraphStyle('RPT_H2',   parent=styles['Heading2'], fontSize=10, textColor=C_BLUE,   spaceAfter=3)
+    N  = ParagraphStyle('RPT_N',    parent=styles['Normal'],   fontSize=9,  textColor=C_NAVY)
+    SM = ParagraphStyle('RPT_SM',   parent=styles['Normal'],   fontSize=8,  textColor=colors.HexColor('#555555'))
 
     story = []
 
@@ -194,9 +178,9 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     kpi_table.setStyle(TableStyle([
         ('BACKGROUND',    (0, 0), (-1, 0), C_NAVY),
         ('TEXTCOLOR',     (0, 0), (-1, 0), C_WHITE),
-        ('FONTNAME',      (0, 0), (-1, 0), FONT_BOLD),
+        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE',      (0, 0), (-1, 0), 8),
-        ('FONTNAME',      (0, 1), (-1, 1), FONT_BOLD),
+        ('FONTNAME',      (0, 1), (-1, 1), 'Helvetica-Bold'),
         ('FONTSIZE',      (0, 1), (-1, 1), 18),
         ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
         ('BACKGROUND',    (0, 1), (-1, 1), colors.HexColor('#EBF5FB')),
@@ -252,9 +236,9 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     dev_stat_table.setStyle(TableStyle([
         ('BACKGROUND',    (0, 0), (-1, 0), C_GREEN),
         ('TEXTCOLOR',     (0, 0), (-1, 0), C_WHITE),
-        ('FONTNAME',      (0, 0), (-1, 0), FONT_BOLD),
+        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE',      (0, 0), (-1, 0), 8),
-        ('FONTNAME',      (0, 1), (-1, 1), FONT_BOLD),
+        ('FONTNAME',      (0, 1), (-1, 1), 'Helvetica-Bold'),
         ('FONTSIZE',      (0, 1), (-1, 1), 16),
         ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
         ('BACKGROUND',    (0, 1), (-1, 1), colors.HexColor('#EAFAF1')),
@@ -298,6 +282,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     dev_table.setStyle(TableStyle([
         *_header_style(C_GREEN).getCommands(),
         ('ALIGN', (2, 0), (5, -1), 'CENTER'),
+        ('FONTNAME', (0, 1), (0, -1), 'Times-Roman'),  # Support Vietnamese in Name column
     ]))
     story.append(dev_table)
 
