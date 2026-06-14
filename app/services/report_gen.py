@@ -270,7 +270,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     dev_rows = [['Name', 'Type', 'Status', 'Floor', 'Room', 'Sensor Value']]
     for d in report.devices:
         dev_rows.append([
-            d.name,
+            Paragraph(d.name, N),  # Wrap name in Paragraph for Unicode support
             d.type.capitalize(),
             d.status,
             str(d.floor),
@@ -282,7 +282,6 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     dev_table.setStyle(TableStyle([
         *_header_style(C_GREEN).getCommands(),
         ('ALIGN', (2, 0), (5, -1), 'CENTER'),
-        ('FONTNAME', (0, 1), (0, -1), 'Times-Roman'),  # Support Vietnamese in Name column
     ]))
     story.append(dev_table)
 
