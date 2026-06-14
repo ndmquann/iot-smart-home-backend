@@ -23,8 +23,16 @@ from reportlab.graphics.shapes import Drawing, String
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics import renderPDF
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from app.schemas.report import ReportSummary
+
+# Register DejaVu font for Vietnamese support
+try:
+    pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
+except:
+    pass  # Font may not be available, will fall back to default
 
 
 # ==========================================
@@ -147,6 +155,8 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     H2 = ParagraphStyle('RPT_H2',   parent=styles['Heading2'], fontSize=10, textColor=C_BLUE,   spaceAfter=3)
     N  = ParagraphStyle('RPT_N',    parent=styles['Normal'],   fontSize=9,  textColor=C_NAVY)
     SM = ParagraphStyle('RPT_SM',   parent=styles['Normal'],   fontSize=8,  textColor=colors.HexColor('#555555'))
+    # Vietnamese-friendly style for name fields
+    N_VN = ParagraphStyle('RPT_N_VN', parent=styles['Normal'], fontSize=9, textColor=C_NAVY, fontName='DejaVuSans')
 
     story = []
 
@@ -270,7 +280,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     dev_rows = [['Name', 'Type', 'Status', 'Floor', 'Room', 'Sensor Value']]
     for d in report.devices:
         dev_rows.append([
-            Paragraph(d.name, N),  # Wrap name in Paragraph for Unicode support
+            Paragraph(d.name, N_VN),  # Use Vietnamese-friendly style
             d.type.capitalize(),
             d.status,
             str(d.floor),
