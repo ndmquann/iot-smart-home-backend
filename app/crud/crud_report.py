@@ -3,7 +3,7 @@ from datetime import date, datetime
 from collections import defaultdict
 from app.schemas.report import (
     ReportSummary, FloorSummary, ZoneDetail,
-    DeviceDetail, AutomationDetail, ActivityBreakdown
+    DeviceDetail, AutomationDetail, ActivityBreakdown, SensorHistoryData, SensorReadingPoint
 )
 
 
@@ -118,6 +118,71 @@ async def _get_activity_breakdown(
     return [dict(r) for r in records]
 
 
+async def _get_sensor_history_stats(
+    conn: asyncpg.Connection,
+    admin_id: int,
+    date_from: date,
+    date_to: date
+) -> list[dict]:
+    """
+    Sensor reading statistics (min, max, avg, count) grouped by device
+    within the period. Only includes sensors owned by this admin.
+    """
+    query = """
+        SELECT
+            d.id AS device_id,
+            d.name AS device_name,
+            COALESCE(z.floor, 0) AS floor,
+            COALESCE(z.room, 'Unassigned') AS room,
+            MIN(sh.value) AS min_value,
+            MAX(sh.value) AS max_value,
+            AVG(sh.value) AS avg_value,
+            COUNT(sh.value) AS reading_count
+        FROM devices d
+        LEFT JOIN zones z ON d.zone_id = z.id
+        LEFT JOIN sensor_history sh ON d.id = sh.device_id
+            AND DATE(sh.timestamp) BETWEEN $2 AND $3
+        WHERE d.admin_id = $1
+        GROUP BY d.id, d.name, z.floor, z.room
+        HAVING COUNT(sh.value) > 0
+        ORDER BY z.floor, z.room, d.name;
+    """
+    records = await conn.fetch(query, admin_id, date_from, date_to)
+    return [dict(r) for r in records]
+
+
+async def _get_sensor_timeseries(
+    conn: asyncpg.Connection,
+    admin_id: int,
+    date_from: date,
+    date_to: date
+) -> dict:
+    """
+    Fetch time-series sensor readings grouped by device_id.
+    Returns a dict mapping device_id -> list of (timestamp, value) tuples.
+    """
+    query = """
+        SELECT
+            d.id AS device_id,
+            sh.timestamp,
+            sh.value
+        FROM sensor_history sh
+        JOIN devices d ON sh.device_id = d.id
+        WHERE d.admin_id = $1
+          AND DATE(sh.timestamp) BETWEEN $2 AND $3
+        ORDER BY d.id, sh.timestamp ASC;
+    """
+    records = await conn.fetch(query, admin_id, date_from, date_to)
+    
+    timeseries = defaultdict(list)
+    for r in records:
+        timeseries[r['device_id']].append({
+            'timestamp': r['timestamp'],
+            'value': r['value']
+        })
+    return dict(timeseries)
+
+
 # ==========================================
 # CSV RAW DATA QUERIES
 # ==========================================
@@ -202,6 +267,8 @@ async def build_report(
     device_rows      = await _get_device_rows(conn, admin_id)
     automation_rows  = await _get_automation_rows(conn, admin_id, home_id, date_from, date_to)
     activity_rows    = await _get_activity_breakdown(conn, home_id, date_from, date_to)
+    sensor_history_rows = await _get_sensor_history_stats(conn, admin_id, date_from, date_to)
+    sensor_timeseries = await _get_sensor_timeseries(conn, admin_id, date_from, date_to)
 
     # ---- Zone section ------------------------------------------------
     floors_map: dict[int, list] = defaultdict(list)
@@ -267,6 +334,25 @@ async def build_report(
     ]
     total_logs = sum(a.count for a in activity_breakdown)
 
+    # ---- Sensor History section ------------------------------------------
+    sensor_history = [
+        SensorHistoryData(
+            device_id=s['device_id'],
+            device_name=s['device_name'],
+            floor=s['floor'],
+            room=s['room'],
+            min_value=s['min_value'],
+            max_value=s['max_value'],
+            avg_value=round(s['avg_value'], 2) if s['avg_value'] else None,
+            reading_count=s['reading_count'],
+            readings=[
+                SensorReadingPoint(timestamp=r['timestamp'], value=r['value'])
+                for r in sensor_timeseries.get(s['device_id'], [])
+            ]
+        )
+        for s in sensor_history_rows
+    ]
+
     return ReportSummary(
         home_id=home_id,
         generated_at=datetime.now(),
@@ -287,4 +373,5 @@ async def build_report(
         automations=automations,
         total_logs_in_period=total_logs,
         activity_breakdown=activity_breakdown,
+        sensor_history=sensor_history,
     )

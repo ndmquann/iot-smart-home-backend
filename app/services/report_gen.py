@@ -22,6 +22,7 @@ from reportlab.platypus import (
 from reportlab.graphics.shapes import Drawing, String
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.charts.linecharts import HorizontalLineChart
 from reportlab.graphics import renderPDF
 
 from app.schemas.report import ReportSummary
@@ -100,6 +101,49 @@ def _pie_chart(data: Dict[str, int], width: float = 260, height: float = 160) ->
         pie.slices[i].strokeColor = C_WHITE
         pie.slices[i].strokeWidth = 1
     drawing.add(pie)
+    return drawing
+
+
+def _line_chart(readings: List, width: float = 460, height: float = 160) -> Drawing:
+    """
+    Line chart from a list of {timestamp, value} dicts.
+    Displays time-series sensor data.
+    """
+    drawing = Drawing(width, height)
+    if not readings or len(readings) < 2:
+        return drawing
+
+    # Sort by timestamp
+    sorted_readings = sorted(readings, key=lambda x: x['timestamp'])
+    
+    # Extract values for the line
+    values = [r['value'] for r in sorted_readings]
+    
+    # Create simple time labels (every nth point to avoid crowding)
+    n = max(1, len(sorted_readings) // 5)
+    labels = []
+    for i, r in enumerate(sorted_readings):
+        if i % n == 0:
+            labels.append(r['timestamp'].strftime('%m-%d %H:%M'))
+        else:
+            labels.append('')
+
+    chart = HorizontalLineChart()
+    chart.x = 50
+    chart.y = 25
+    chart.width = width - 70
+    chart.height = height - 40
+    chart.data = [values]
+    chart.categoryAxis.categoryNames = labels
+    chart.categoryAxis.labels.fontSize = 7
+    chart.categoryAxis.labels.angle = 20
+    chart.categoryAxis.labels.dy = -8
+    chart.lines[0].strokeColor = C_BLUE
+    chart.lines[0].strokeWidth = 2
+    chart.valueAxis.valueMin = min(values) * 0.95 if values else 0
+    chart.valueAxis.valueMax = max(values) * 1.05 if values else 1
+    chart.valueAxis.labels.fontSize = 8
+    drawing.add(chart)
     return drawing
 
 
@@ -227,7 +271,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     # ──────────────────────────────────────────
     # SECTION 2 — DEVICES
     # ──────────────────────────────────────────
-    story.append(PageBreak())
+    # story.append(PageBreak())
     story.append(Paragraph("2. Device Summary", H1))
 
     # device stats strip
@@ -297,7 +341,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     # ──────────────────────────────────────────
     # SECTION 3 — AUTOMATION
     # ──────────────────────────────────────────
-    story.append(PageBreak())
+    # story.append(PageBreak())
     story.append(Paragraph("3. Automation Summary", H1))
     story.append(Paragraph(
         f"{report.total_schedules} schedule(s)  ·  {report.total_thresholds} threshold(s) configured.", N
@@ -347,6 +391,49 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
         story.append(Paragraph("Activity Distribution", H2))
         chart_data = {a.type: a.count for a in report.activity_breakdown}
         story.append(_bar_chart(chart_data))
+
+    # ──────────────────────────────────────────
+    # SECTION 5 — SENSOR HISTORY
+    # ──────────────────────────────────────────
+    if report.sensor_history:
+        story.append(Spacer(1, 0.8 * cm))
+        story.append(Paragraph("5. Sensor History Statistics", H1))
+        story.append(Paragraph(
+            f"{len(report.sensor_history)} sensor(s) with {sum(s.reading_count for s in report.sensor_history)} total reading(s) in this period.", N
+        ))
+        story.append(Spacer(1, 0.25 * cm))
+
+        sensor_rows = [['Device', 'Floor', 'Room', 'Min', 'Max', 'Average', 'Readings']]
+        for s in report.sensor_history:
+            sensor_rows.append([
+                s.device_name,
+                str(s.floor),
+                s.room,
+                str(round(s.min_value, 2)) if s.min_value is not None else '—',
+                str(round(s.max_value, 2)) if s.max_value is not None else '—',
+                str(s.avg_value) if s.avg_value is not None else '—',
+                str(s.reading_count),
+            ])
+
+        sensor_table = Table(sensor_rows, colWidths=[3.5 * cm, 1.5 * cm, 3 * cm, 2 * cm, 2 * cm, 2 * cm, 1.8 * cm])
+        sensor_table.setStyle(TableStyle([
+            *_header_style(C_BLUE).getCommands(),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('ALIGN', (3, 0), (6, -1), 'CENTER'),
+        ]))
+        story.append(sensor_table)
+        
+        # Add line charts for each sensor with readings
+        story.append(Spacer(1, 0.4 * cm))
+        story.append(Paragraph("Time-Series Visualization", H2))
+        story.append(Spacer(1, 0.2 * cm))
+        
+        for sensor in report.sensor_history:
+            if sensor.readings:
+                story.append(Paragraph(f"{sensor.device_name} ({sensor.room}, Floor {sensor.floor})", H2))
+                readings_data = [{'timestamp': r.timestamp, 'value': r.value} for r in sensor.readings]
+                story.append(_line_chart(readings_data, width=465))
+                story.append(Spacer(1, 0.3 * cm))
 
     doc.build(story)
     buffer.seek(0)

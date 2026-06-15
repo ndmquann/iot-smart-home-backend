@@ -41,6 +41,23 @@ class ActivityBreakdown(BaseModel):
     count: int
 
 
+class SensorReadingPoint(BaseModel):
+    timestamp: datetime
+    value: float
+
+
+class SensorHistoryData(BaseModel):
+    device_id: int
+    device_name: str
+    floor: int
+    room: str
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    avg_value: Optional[float] = None
+    reading_count: int = 0
+    readings: List[SensorReadingPoint] = []
+
+
 class ReportSummary(BaseModel):
     home_id: int
     generated_at: datetime
@@ -69,6 +86,9 @@ class ReportSummary(BaseModel):
     # Activity section
     total_logs_in_period: int
     activity_breakdown: List[ActivityBreakdown]
+
+    # Sensor history section
+    sensor_history: List[SensorHistoryData] = []
 
     class Config:
         from_attributes = True
