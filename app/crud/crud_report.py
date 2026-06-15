@@ -1,10 +1,13 @@
 import asyncpg
+import logging
 from datetime import date, datetime
 from collections import defaultdict
 from app.schemas.report import (
     ReportSummary, FloorSummary, ZoneDetail,
     DeviceDetail, AutomationDetail, ActivityBreakdown, SensorHistoryData, SensorReadingPoint
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ==========================================
@@ -148,7 +151,11 @@ async def _get_sensor_history_stats(
         ORDER BY z.floor, z.room, d.name;
     """
     records = await conn.fetch(query, admin_id, date_from, date_to)
-    return [dict(r) for r in records]
+    result = [dict(r) for r in records]
+    logger.info(f"[SENSOR_STATS] Retrieved {len(result)} sensors with history for admin_id={admin_id}, period={date_from} to {date_to}")
+    for r in result:
+        logger.debug(f"[SENSOR_STATS] Device: {r['device_name']}, Readings: {r['reading_count']}, Min: {r['min_value']}, Max: {r['max_value']}, Avg: {r['avg_value']}")
+    return result
 
 
 async def _get_sensor_timeseries(
@@ -173,6 +180,7 @@ async def _get_sensor_timeseries(
         ORDER BY d.id, sh.timestamp ASC;
     """
     records = await conn.fetch(query, admin_id, date_from, date_to)
+    logger.info(f"[SENSOR_TIMESERIES] Retrieved {len(records)} total data points for admin_id={admin_id}, period={date_from} to {date_to}")
     
     timeseries = defaultdict(list)
     for r in records:
@@ -180,6 +188,9 @@ async def _get_sensor_timeseries(
             'timestamp': r['timestamp'],
             'value': r['value']
         })
+    logger.info(f"[SENSOR_TIMESERIES] Grouped into {len(timeseries)} devices: {list(timeseries.keys())}")
+    for device_id, readings in timeseries.items():
+        logger.debug(f"[SENSOR_TIMESERIES] Device ID {device_id}: {len(readings)} readings")
     return dict(timeseries)
 
 
@@ -352,6 +363,9 @@ async def build_report(
         )
         for s in sensor_history_rows
     ]
+    logger.info(f"[BUILD_REPORT] Sensor History: {len(sensor_history)} sensors with readings")
+    for sh in sensor_history:
+        logger.info(f"[BUILD_REPORT] {sh.device_name}: {len(sh.readings)} reading points, stats(min={sh.min_value}, max={sh.max_value}, avg={sh.avg_value})")
 
     return ReportSummary(
         home_id=home_id,
