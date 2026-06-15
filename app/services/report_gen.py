@@ -23,17 +23,17 @@ from reportlab.graphics.shapes import Drawing, String
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics import renderPDF
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 
 from app.schemas.report import ReportSummary
 
-# Register DejaVu font for Vietnamese support
-try:
-    pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
-except:
-    pass  # Font may not be available, will fall back to default
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
 
+FONT_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'font')
+pdfmetrics.registerFont(TTFont("DejaVu", os.path.join(FONT_DIR, "DejaVuSans.ttf")))
+pdfmetrics.registerFont(TTFont("DejaVu-Bold", os.path.join(FONT_DIR, "DejaVuSans-Bold.ttf")))
+pdfmetrics.registerFontFamily("DejaVu", normal="DejaVu", bold="DejaVu-Bold")
 
 # ==========================================
 # PALETTE
@@ -111,7 +111,7 @@ def _header_style(header_color) -> TableStyle:
     return TableStyle([
         ('BACKGROUND',    (0, 0), (-1, 0), header_color),
         ('TEXTCOLOR',     (0, 0), (-1, 0), C_WHITE),
-        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME',      (0, 0), (-1, 0), 'DejaVu-Bold'),
         ('FONTSIZE',      (0, 0), (-1, -1), 9),
         ('ROWBACKGROUNDS',(0, 1), (-1, -1), [C_WHITE, C_LIGHT]),
         ('BOX',           (0, 0), (-1, -1), 0.8, C_BORDER),
@@ -155,8 +155,6 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     H2 = ParagraphStyle('RPT_H2',   parent=styles['Heading2'], fontSize=10, textColor=C_BLUE,   spaceAfter=3)
     N  = ParagraphStyle('RPT_N',    parent=styles['Normal'],   fontSize=9,  textColor=C_NAVY)
     SM = ParagraphStyle('RPT_SM',   parent=styles['Normal'],   fontSize=8,  textColor=colors.HexColor('#555555'))
-    # Vietnamese-friendly style for name fields
-    N_VN = ParagraphStyle('RPT_N_VN', parent=styles['Normal'], fontSize=9, textColor=C_NAVY, fontName='DejaVuSans')
 
     story = []
 
@@ -188,9 +186,9 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     kpi_table.setStyle(TableStyle([
         ('BACKGROUND',    (0, 0), (-1, 0), C_NAVY),
         ('TEXTCOLOR',     (0, 0), (-1, 0), C_WHITE),
-        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME',      (0, 0), (-1, 0), 'DejaVu-Bold'),
         ('FONTSIZE',      (0, 0), (-1, 0), 8),
-        ('FONTNAME',      (0, 1), (-1, 1), 'Helvetica-Bold'),
+        ('FONTNAME',      (0, 1), (-1, 1), 'DejaVu-Bold'),
         ('FONTSIZE',      (0, 1), (-1, 1), 18),
         ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
         ('BACKGROUND',    (0, 1), (-1, 1), colors.HexColor('#EBF5FB')),
@@ -246,9 +244,9 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     dev_stat_table.setStyle(TableStyle([
         ('BACKGROUND',    (0, 0), (-1, 0), C_GREEN),
         ('TEXTCOLOR',     (0, 0), (-1, 0), C_WHITE),
-        ('FONTNAME',      (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME',      (0, 0), (-1, 0), 'DejaVu-Bold'),
         ('FONTSIZE',      (0, 0), (-1, 0), 8),
-        ('FONTNAME',      (0, 1), (-1, 1), 'Helvetica-Bold'),
+        ('FONTNAME',      (0, 1), (-1, 1), 'DejaVu-Bold'),
         ('FONTSIZE',      (0, 1), (-1, 1), 16),
         ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
         ('BACKGROUND',    (0, 1), (-1, 1), colors.HexColor('#EAFAF1')),
@@ -280,7 +278,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     dev_rows = [['Name', 'Type', 'Status', 'Floor', 'Room', 'Sensor Value']]
     for d in report.devices:
         dev_rows.append([
-            Paragraph(d.name, N_VN),  # Use Vietnamese-friendly style
+            d.name,
             d.type.capitalize(),
             d.status,
             str(d.floor),
