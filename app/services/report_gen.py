@@ -112,6 +112,7 @@ def _header_style(header_color) -> TableStyle:
         ('BACKGROUND',    (0, 0), (-1, 0), header_color),
         ('TEXTCOLOR',     (0, 0), (-1, 0), C_WHITE),
         ('FONTNAME',      (0, 0), (-1, 0), 'DejaVu-Bold'),
+        ('FONTNAME',      (0, 1), (-1, -1), 'DejaVu'),
         ('FONTSIZE',      (0, 0), (-1, -1), 9),
         ('ROWBACKGROUNDS',(0, 1), (-1, -1), [C_WHITE, C_LIGHT]),
         ('BOX',           (0, 0), (-1, -1), 0.8, C_BORDER),
@@ -150,11 +151,11 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     )
 
     styles = getSampleStyleSheet()
-    T  = ParagraphStyle('RPT_Title', parent=styles['Title'],   fontSize=22, textColor=C_NAVY,   spaceAfter=4)
-    H1 = ParagraphStyle('RPT_H1',   parent=styles['Heading1'], fontSize=13, textColor=C_NAVY,   spaceAfter=4,  spaceBefore=10)
-    H2 = ParagraphStyle('RPT_H2',   parent=styles['Heading2'], fontSize=10, textColor=C_BLUE,   spaceAfter=3)
-    N  = ParagraphStyle('RPT_N',    parent=styles['Normal'],   fontSize=9,  textColor=C_NAVY)
-    SM = ParagraphStyle('RPT_SM',   parent=styles['Normal'],   fontSize=8,  textColor=colors.HexColor('#555555'))
+    T  = ParagraphStyle('RPT_Title', parent=styles['Title'],   fontName='DejaVu-Bold', fontSize=22, textColor=C_NAVY,  spaceAfter=4)
+    H1 = ParagraphStyle('RPT_H1',   parent=styles['Heading1'], fontName='DejaVu-Bold', fontSize=13, textColor=C_NAVY,  spaceAfter=4,  spaceBefore=10)
+    H2 = ParagraphStyle('RPT_H2',   parent=styles['Heading2'], fontName='DejaVu-Bold', fontSize=10, textColor=C_BLUE,  spaceAfter=3)
+    N  = ParagraphStyle('RPT_N',    parent=styles['Normal'],   fontName='DejaVu',      fontSize=9,  textColor=C_NAVY)
+    SM = ParagraphStyle('RPT_SM',   parent=styles['Normal'],   fontName='DejaVu',      fontSize=8,  textColor=colors.HexColor('#555555'))
 
     story = []
 
