@@ -446,9 +446,9 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
 # CSV GENERATION
 # ==========================================
 
-def generate_csv_sensors(records: List[Dict]) -> io.StringIO:
+def generate_csv_sensors(records: List[Dict]) -> io.BytesIO:
     """
-    CSV of time-series sensor readings.
+    CSV of time-series sensor readings with UTF-8 BOM for Vietnamese support.
     Columns: device_name, floor, room, value, timestamp
     """
     output = io.StringIO()
@@ -465,13 +465,12 @@ def generate_csv_sensors(records: List[Dict]) -> io.StringIO:
             'value':       r['value'],
             'timestamp':   r['timestamp'].isoformat() if r['timestamp'] else '',
         })
-    output.seek(0)
-    return output
+    return io.BytesIO(output.getvalue().encode('utf-8-sig'))  # BOM + UTF-8
 
 
-def generate_csv_logs(records: List[Dict]) -> io.StringIO:
+def generate_csv_logs(records: List[Dict]) -> io.BytesIO:
     """
-    CSV of activity log entries.
+    CSV of activity log entries with UTF-8 BOM for Vietnamese support.
     Columns: id, type, description, timestamp
     """
     output = io.StringIO()
@@ -487,5 +486,4 @@ def generate_csv_logs(records: List[Dict]) -> io.StringIO:
             'description': r['description'],
             'timestamp':   r['timestamp'].isoformat() if r['timestamp'] else '',
         })
-    output.seek(0)
-    return output
+    return io.BytesIO(output.getvalue().encode('utf-8-sig'))  # BOM + UTF-8

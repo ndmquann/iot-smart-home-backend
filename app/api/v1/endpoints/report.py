@@ -178,9 +178,9 @@ async def get_csv_sensors(
 
         filename = f"sensor_history_{date_from}_to_{date_to}.csv"
         return StreamingResponse(
-            iter([csv_buffer.getvalue()]),
-            media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            csv_buffer,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.csv"'}
         )
     except Exception as e:
         raise DatabaseException(f"Failed to export sensor CSV: {str(e)}")
@@ -228,9 +228,9 @@ async def get_csv_logs(
 
         filename = f"activity_logs_{date_from}_to_{date_to}.csv"
         return StreamingResponse(
-            iter([csv_buffer.getvalue()]),
-            media_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            csv_buffer,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
     except Exception as e:
         raise DatabaseException(f"Failed to export logs CSV: {str(e)}")
