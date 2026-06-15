@@ -116,13 +116,6 @@ def _line_chart(readings: List, width: float = 460, height: float = 160) -> Draw
     # Sort by timestamp
     sorted_readings = sorted(readings, key=lambda x: x['timestamp'])
     
-    # 1. FIX: Downsample dữ liệu nếu số điểm quá lớn (> 60 điểm)
-    # Giúp ReportLab không bị treo khi render hàng ngàn điểm
-    max_points = 60
-    if len(sorted_readings) > max_points:
-        step = len(sorted_readings) // max_points
-        sorted_readings = sorted_readings[::step]
-    
     # Extract values for the line
     values = [r['value'] for r in sorted_readings]
     
@@ -147,20 +140,8 @@ def _line_chart(readings: List, width: float = 460, height: float = 160) -> Draw
     chart.categoryAxis.labels.dy = -8
     chart.lines[0].strokeColor = C_BLUE
     chart.lines[0].strokeWidth = 2
-    
-    # 2. FIX: Tránh lỗi crash ZeroDivisionError khi Min == Max
-    v_min = min(values)
-    v_max = max(values)
-    
-    if v_min == v_max:
-        # Nếu đường thẳng đi ngang, nới rộng trục Y ra ±1 đơn vị
-        chart.valueAxis.valueMin = v_min - 1
-        chart.valueAxis.valueMax = v_max + 1
-    else:
-        # Scale margin 5% cho đồ thị đẹp hơn
-        chart.valueAxis.valueMin = v_min * 0.95 if v_min > 0 else v_min * 1.05
-        chart.valueAxis.valueMax = v_max * 1.05 if v_max > 0 else v_max * 0.95
-        
+    chart.valueAxis.valueMin = min(values) * 0.95 if values else 0
+    chart.valueAxis.valueMax = max(values) * 1.05 if values else 1
     chart.valueAxis.labels.fontSize = 8
     drawing.add(chart)
     return drawing
