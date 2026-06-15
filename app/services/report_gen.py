@@ -8,11 +8,8 @@ CSV  – stdlib csv, returned as StringIO for StreamingResponse
 """
 import io
 import csv
-import logging
 from datetime import date
 from typing import List, Dict
-
-logger = logging.getLogger(__name__)
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -185,12 +182,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     Page 2 : Section 2 – Device table + status pie chart
     Page 3 : Section 3 – Automation table
     Page 3 : Section 4 – Activity bar chart + breakdown table
-    """
-    logger.info(f"[PDF_GENERATION] Starting PDF generation")
-    logger.info(f"[PDF_GENERATION] Sensor History: {len(report.sensor_history)} sensors")
-    for sh in report.sensor_history:
-        logger.info(f"[PDF_GENERATION] {sh.device_name}: {len(sh.readings)} readings")
-    
+    """    
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -403,9 +395,7 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
     # ──────────────────────────────────────────
     # SECTION 5 — SENSOR HISTORY
     # ──────────────────────────────────────────
-    logger.info(f"[PDF_SECTION5] Checking sensor_history: {len(report.sensor_history)} sensors")
     if report.sensor_history:
-        logger.info(f"[PDF_SECTION5] Rendering sensor history section")
         story.append(Spacer(1, 0.8 * cm))
         story.append(Paragraph("5. Sensor History Statistics", H1))
         story.append(Paragraph(
@@ -438,19 +428,14 @@ def generate_pdf(report: ReportSummary) -> io.BytesIO:
         story.append(Paragraph("Time-Series Visualization", H2))
         story.append(Spacer(1, 0.2 * cm))
         
-        chart_count = 0
         for sensor in report.sensor_history:
-            logger.info(f"[PDF_LINECHART] Processing {sensor.device_name}: {len(sensor.readings)} readings")
             if sensor.readings:
-                logger.info(f"[PDF_LINECHART] Rendering chart for {sensor.device_name}")
-                chart_count += 1
                 story.append(Paragraph(f"{sensor.device_name} ({sensor.room}, Floor {sensor.floor})", H2))
                 readings_data = [{'timestamp': r.timestamp, 'value': r.value} for r in sensor.readings]
                 story.append(_line_chart(readings_data, width=465))
                 story.append(Spacer(1, 0.3 * cm))
             else:
-                logger.info(f"[PDF_LINECHART] No readings for {sensor.device_name}")
-        logger.info(f"[PDF_LINECHART] Total charts rendered: {chart_count}")
+                story.append(Paragraph(f"No readings available for {sensor.device_name}", N))
 
     doc.build(story)
     buffer.seek(0)

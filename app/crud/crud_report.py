@@ -1,14 +1,10 @@
 import asyncpg
-import logging
 from datetime import date, datetime
 from collections import defaultdict
 from app.schemas.report import (
     ReportSummary, FloorSummary, ZoneDetail,
     DeviceDetail, AutomationDetail, ActivityBreakdown, SensorHistoryData, SensorReadingPoint
 )
-
-logger = logging.getLogger(__name__)
-
 
 # ==========================================
 # SUB-QUERIES
@@ -144,7 +140,7 @@ async def _get_sensor_history_stats(
         FROM devices d
         LEFT JOIN zones z ON d.zone_id = z.id
         LEFT JOIN sensor_history sh ON d.id = sh.device_id
-            AND DATE(sh.timestamp) BETWEEN $2 AND $3
+            AND DATE(sh."timestamp") BETWEEN $2 AND $3
         WHERE d.admin_id = $1
         GROUP BY d.id, d.name, z.floor, z.room
         HAVING COUNT(sh.value) > 0
@@ -152,9 +148,6 @@ async def _get_sensor_history_stats(
     """
     records = await conn.fetch(query, admin_id, date_from, date_to)
     result = [dict(r) for r in records]
-    logger.info(f"[SENSOR_STATS] Retrieved {len(result)} sensors with history for admin_id={admin_id}, period={date_from} to {date_to}")
-    for r in result:
-        logger.debug(f"[SENSOR_STATS] Device: {r['device_name']}, Readings: {r['reading_count']}, Min: {r['min_value']}, Max: {r['max_value']}, Avg: {r['avg_value']}")
     return result
 
 
@@ -171,26 +164,21 @@ async def _get_sensor_timeseries(
     query = """
         SELECT
             d.id AS device_id,
-            sh.timestamp,
+            sh."timestamp",
             sh.value
         FROM sensor_history sh
         JOIN devices d ON sh.device_id = d.id
         WHERE d.admin_id = $1
-          AND DATE(sh.timestamp) BETWEEN $2 AND $3
-        ORDER BY d.id, sh.timestamp ASC;
+          AND DATE(sh."timestamp") BETWEEN $2 AND $3
+        ORDER BY d.id, sh."timestamp" ASC;
     """
-    records = await conn.fetch(query, admin_id, date_from, date_to)
-    logger.info(f"[SENSOR_TIMESERIES] Retrieved {len(records)} total data points for admin_id={admin_id}, period={date_from} to {date_to}")
-    
+    records = await conn.fetch(query, admin_id, date_from, date_to)    
     timeseries = defaultdict(list)
     for r in records:
         timeseries[r['device_id']].append({
             'timestamp': r['timestamp'],
             'value': r['value']
         })
-    logger.info(f"[SENSOR_TIMESERIES] Grouped into {len(timeseries)} devices: {list(timeseries.keys())}")
-    for device_id, readings in timeseries.items():
-        logger.debug(f"[SENSOR_TIMESERIES] Device ID {device_id}: {len(readings)} readings")
     return dict(timeseries)
 
 
@@ -214,13 +202,13 @@ async def get_sensor_history_rows(
             z.floor,
             z.room,
             sh.value,
-            sh.timestamp
+            sh."timestamp"
         FROM sensor_history sh
         JOIN devices d ON sh.device_id = d.id
         JOIN zones   z ON d.zone_id    = z.id
         WHERE d.admin_id = $1
-          AND DATE(sh.timestamp) BETWEEN $2 AND $3
-        ORDER BY d.name, sh.timestamp DESC;
+          AND DATE(sh."timestamp") BETWEEN $2 AND $3
+        ORDER BY d.name, sh."timestamp" DESC;
     """
     records = await conn.fetch(query, admin_id, date_from, date_to)
     return [dict(r) for r in records]
@@ -363,9 +351,6 @@ async def build_report(
         )
         for s in sensor_history_rows
     ]
-    logger.info(f"[BUILD_REPORT] Sensor History: {len(sensor_history)} sensors with readings")
-    for sh in sensor_history:
-        logger.info(f"[BUILD_REPORT] {sh.device_name}: {len(sh.readings)} reading points, stats(min={sh.min_value}, max={sh.max_value}, avg={sh.avg_value})")
 
     return ReportSummary(
         home_id=home_id,
@@ -387,5 +372,5 @@ async def build_report(
         automations=automations,
         total_logs_in_period=total_logs,
         activity_breakdown=activity_breakdown,
-        sensor_history=sensor_history,
+        sensor_history=sensor_history
     )
